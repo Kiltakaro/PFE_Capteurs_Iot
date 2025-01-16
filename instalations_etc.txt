@@ -1,0 +1,7 @@
+pip install flask
+
+npm install -g @vue/cli
+
+
+# plus tard
+pip install -r requirements.txt

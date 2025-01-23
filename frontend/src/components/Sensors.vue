@@ -21,7 +21,8 @@
           {{ sensor.name }} | ({{ sensor.unit }})
         </li>
       </ul>
-      <!-- <RouterView /> -->
+
+
     </div>
   </template>
   

@@ -1,4 +1,4 @@
-<!-- <template>
+<template>
     <div class="login">
       <h2>Connexion</h2>
       <form @submit.prevent="login">
@@ -23,7 +23,7 @@
 
   export default {
 
-    name: 'Login',
+    name: 'LoginPage',
 
     data() {
       return {
@@ -75,4 +75,4 @@
     color: red;
   }
   </style>
-   -->
+  

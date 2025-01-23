@@ -7,6 +7,7 @@ import * as VueRouter from 'vue-router'
 // Importation des composants pour les routes
 import MyComponent from './components/MyComponent.vue'
 import HelloWorld from './components/HelloWorld.vue'
+import LoginPage from './components/LoginPage.vue'
 
 // Configuration du routeur directement dans main.js
 const router = VueRouter.createRouter({
@@ -21,6 +22,11 @@ const router = VueRouter.createRouter({
       path: '/mycomponent',
       name: 'MyComponent',
       component: MyComponent  // Définition de la route pour MyComponent
+    },
+    {
+      path:'/login',
+      name: 'LoginPage',
+      component: LoginPage
     }
   ]
 })

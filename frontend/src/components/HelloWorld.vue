@@ -1,8 +1,11 @@
 <template>
   <div>
     <h1>Hello W0rld</h1>
-    <router-link to="/mycomponent">MyComponent</router-link>
-    <router-link to="/login">Login</router-link>
+    <ul>
+      <li><router-link to="/mycomponent">MyComponent</router-link></li>
+      <li><router-link to="/login">Login</router-link></li>
+      <li><router-link to="/admindashboard">admin</router-link></li>
+    </ul>
   </div>
 </template>
 

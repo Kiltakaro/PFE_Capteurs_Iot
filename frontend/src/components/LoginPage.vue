@@ -1,6 +1,8 @@
 <template>
     <div class="login">
       <h2>Connexion</h2>
+      <router-link to="/">Home</router-link>
+
       <form @submit.prevent="login">
         <div>
           <label for="username">Nom d'utilisateur</label>
@@ -19,7 +21,7 @@
   <script>
   import axios from "axios";
   
-  const ip = 'backend'; // Remplacez 'backend' par localhost si tests sans docker
+  const ip = 'localhost'; // Remplacez 'backend' par localhost si tests sans docker
 
   export default {
 

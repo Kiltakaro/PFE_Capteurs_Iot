@@ -18,3 +18,10 @@ python3 -m venv .venv
 
 
 source .venv/bin/activate
+
+
+IP= beckend, a mettre dans un .env je pense
+
+curl -X POST http://127.0.0.1:5000/add_user -H "Content-Type: application/json" -d '{"username": "admin", "password": "password123", "is_admin": true}'
+curl -X POST http://127.0.0.1:5000/add_user -H "Content-Type: application/json" -d '{"username": "user1", "password": "password123", "is_admin": false}'
+curl http://127.0.0.1:5000/users

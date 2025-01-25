@@ -2,11 +2,22 @@ from flask import Flask, jsonify, request
 from flask_cors import CORS
 from flask_sqlalchemy import SQLAlchemy
 from flask_jwt_extended import JWTManager, create_access_token, jwt_required
+from werkzeug.security import check_password_hash, generate_password_hash
+
 
 from models import db, User, SensorData
 
 app = Flask(__name__)
-CORS(app)  # Applique CORS à toutes les routes pour eviter plein de bug, trust me
+# Configuration CORS
+
+origins = [
+    "http://localhost",
+    "http://localhost:8080",
+    "http://127.0.0.1:5000",
+    "null"
+]
+
+CORS(app, resources={r"/*": {"origins": origins}}, supports_credentials=True)
 
 ############## TEST BASE DE DONNES SQLLITE ###############
 
@@ -20,8 +31,10 @@ db.init_app(app)
 with app.app_context():
     db.create_all()
 
+# Clé secrète pour générer les tokens JWT
 app.config["JWT_SECRET_KEY"] = "super-secret-key"  # À changer avec une vraie clé secrète en production
 jwt = JWTManager(app)
+
 
 ###############################################""
 
@@ -36,7 +49,7 @@ def hello_world():
 
 #################### ACCOUNTS #####################
 
-@app.route('/add_user', methods=['POST'])
+@app.route('/api/users/create', methods=['POST'])
 def add_user():
     data = request.json
     username = data.get('username')
@@ -58,7 +71,9 @@ def add_user():
 
     return jsonify({"message": "User created successfully"}), 201
 
-@app.route('/users', methods=['GET'])
+
+# ROute a proteger je pense
+@app.route('/api/users', methods=['GET'])
 def get_users():
     users = User.query.all()
     return jsonify([{
@@ -69,23 +84,18 @@ def get_users():
 
 
 
-# Clé secrète pour générer les tokens JWT
-app.config['JWT_SECRET_KEY'] = 'votre_clé_secrète'
-jwt = JWTManager(app)
-
-# Simuler une base de données d'utilisateurs
-users_db = {
-    "admin": {"password": "admin123", "role": "admin"},
-    "user1": {"password": "user123", "role": "user"}
-}
 
 @app.route('/api/login', methods=['POST'])
 def login():
+
     username = request.json.get('username', None)
     password = request.json.get('password', None)
 
-    # Vérifier si l'utilisateur existe
-    if username in users_db and check_password_hash(users_db[username]["password"], password):
+    # Vérifier si l'utilisateur existe dans la base de données
+    user = User.query.filter_by(username=username).first()
+    print("test")
+    print(user)
+    if user and check_password_hash(user.password, password):
         # Créer un token d'accès
         access_token = create_access_token(identity=username)
         return jsonify(access_token=access_token), 200
@@ -119,7 +129,7 @@ if __name__ == '__main__':
 
 
 
-
+########################## A FINIR ################
 # Création de la base de données (au démarrage uniquement pour dev)
 @app.before_first_request
 def create_tables():
@@ -128,14 +138,14 @@ def create_tables():
 # Endpoint pour obtenir tous les capteurs
 @app.route('/api/sensors', methods=['GET'])
 def get_sensors():
-    sensors = Sensor.query.all()
+    sensors = SensorData.query.all()
     return jsonify([sensor.to_dict() for sensor in sensors])
 
 # Endpoint pour ajouter un capteur
 @app.route('/api/sensors', methods=['POST'])
 def add_sensor():
     data = request.json
-    new_sensor = Sensor(
+    new_sensor = SensorData(
         name=data['name'],
         uid=data['uid'],
         unit=data['unit'],
@@ -144,7 +154,4 @@ def add_sensor():
     db.session.add(new_sensor)
     db.session.commit()
     return jsonify(new_sensor.to_dict()), 201
-
-if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0')
 

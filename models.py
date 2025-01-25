@@ -1,5 +1,5 @@
 from flask_sqlalchemy import SQLAlchemy
-from werkzeug.security import generate_password_hash, check_password_hash
+from werkzeug.security import generate_password_hash
 
 db = SQLAlchemy()
 
@@ -8,15 +8,12 @@ class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(80), unique=True, nullable=False)
     password = db.Column(db.String(200), nullable=False)  # Mot de passe hashé
-    is_admin = db.Column(db.Boolean, default=False)  # False = simple user, True = admin
+    is_admin = db.Column(db.Boolean, default=False)  # False = user, True = admin
 
     def set_password(self, password):
         """Hash et stocke le mot de passe."""
         self.password = generate_password_hash(password)
 
-    def check_password(self, password):
-        """Vérifie si le mot de passe est correct."""
-        return check_password_hash(self.password, password)
 
 class SensorData(db.Model):
     __tablename__ = 'sensor_data'

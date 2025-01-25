@@ -8,6 +8,7 @@ import * as VueRouter from 'vue-router'
 import MyComponent from './components/MyComponent.vue'
 import HelloWorld from './components/HelloWorld.vue'
 import LoginPage from './components/LoginPage.vue'
+import AdminDashboard from './components/AdminDashboard.vue'
 
 // Configuration du routeur directement dans main.js
 const router = VueRouter.createRouter({
@@ -27,9 +28,16 @@ const router = VueRouter.createRouter({
       path:'/login',
       name: 'LoginPage',
       component: LoginPage
-    }
+    },
+    {
+      path: '/admindashboard',
+      name: 'AdminDashboard',
+      component: AdminDashboard,
+      // meta: { requiresAuth: true, requiresAdmin: true }, // Protège la route
+    },
   ]
 })
+
 
 // Création de l'application Vue et utilisation du routeur
 createApp(App)

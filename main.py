@@ -14,10 +14,20 @@ origins = [
     "http://localhost",
     "http://localhost:8080",
     "http://127.0.0.1:5000",
+    "http://frontend",
+    "http://frontend:8080",
+    "http://frontend:5000",
+    "http://backend",
+    "http://backend:8080",
+    "http://backend:5000",
     "null"
 ]
 
-CORS(app, resources={r"/*": {"origins": origins}}, supports_credentials=True)
+CORS(app, resources={r"/api/*": {"origins": "*"}}, supports_credentials=True)
+
+# CORS(app, resources={r"/*": {"origins": origins}}, supports_credentials=True)
+
+
 
 ############## TEST BASE DE DONNES SQLLITE ###############
 
@@ -83,6 +93,16 @@ def get_users():
     } for user in users]), 200
 
 
+# Ajouter sécurité
+@app.route('/api/users/<int:user_id>', methods=['DELETE'])
+def delete_user(user_id):
+    user = User.query.get(user_id)
+    if not user:
+        return jsonify({"error": "User not found"}), 404
+
+    db.session.delete(user)
+    db.session.commit()
+    return jsonify({"message": "User deleted successfully"}), 200
 
 
 @app.route('/api/login', methods=['POST'])

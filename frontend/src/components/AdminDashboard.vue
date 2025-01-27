@@ -3,6 +3,7 @@
     <h1>Tableau de bord Admin</h1>
 
     <h2>Liste des utilisateurs</h2>
+    <router-link to="/">Home</router-link>
     <table>
       <thead>
         <tr>

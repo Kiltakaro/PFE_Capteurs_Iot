@@ -5,6 +5,8 @@
       <li><router-link to="/mycomponent">MyComponent</router-link></li>
       <li><router-link to="/login">Login</router-link></li>
       <li><router-link to="/admindashboard">admin</router-link></li>
+      <li><router-link to="/sensors">Sensors</router-link></li>
+
     </ul>
   </div>
 </template>

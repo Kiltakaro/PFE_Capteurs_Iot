@@ -9,6 +9,8 @@ import MyComponent from './components/MyComponent.vue'
 import HelloWorld from './components/HelloWorld.vue'
 import LoginPage from './components/LoginPage.vue'
 import AdminDashboard from './components/AdminDashboard.vue'
+import IotSensors from './components/IotSensors.vue'
+import NotFound from './components/NotFound.vue'
 
 // Configuration du routeur directement dans main.js
 const router = VueRouter.createRouter({
@@ -34,6 +36,16 @@ const router = VueRouter.createRouter({
       name: 'AdminDashboard',
       component: AdminDashboard,
       // meta: { requiresAuth: true, requiresAdmin: true }, // Protège la route
+    },
+    {
+      path:'/sensors',
+      name: 'SensorsPage',
+      component: IotSensors
+    },
+    {
+      path: '/*', // Capture toutes les routes non définies
+      name: 'NotFound',
+      component: NotFound,
     },
   ]
 })

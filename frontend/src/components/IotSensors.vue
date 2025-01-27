@@ -28,10 +28,10 @@
   
   <script>
   import axios from "axios";
-  import MyComponent from './components/MyComponent.vue';
+  import MyComponent from "./MyComponent.vue";
   // import { useRouter } from 'vue-router';
   
-  const ip = 'backend'; // Remplacez 'backend' par localhost si tests sans docker
+  const ip = 'localhost'; // Remplacez 'backend' par localhost si tests sans docker
   
   export default {
     components: {

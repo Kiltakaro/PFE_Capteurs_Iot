@@ -9,6 +9,7 @@
       <!-- <router-link to="/MyComponent">Se connecter</router-link> -->
   
   
+      <!-- ajouter LA FREQUENCE ????  -->
       <form @submit.prevent="addSensor">
         <input v-model="newSensor.name" type="text" placeholder="Nom du capteur" required />
         <input v-model="newSensor.unit" type="text" placeholder="Unité de mesure" required />
@@ -49,13 +50,6 @@
     },
   
     methods: {
-  
-      // redirectToLogin() {
-      //   this.$router.push({ name: 'login' });
-      // }
-      // redirectToLogin() {
-      //   this.$router.push('/login');
-      // },
   
       async addSensor() {
         try {

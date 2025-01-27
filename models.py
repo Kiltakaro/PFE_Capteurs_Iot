@@ -18,6 +18,14 @@ class User(db.Model):
 class SensorData(db.Model):
     __tablename__ = 'sensor_data'
     id = db.Column(db.Integer, primary_key=True)
-    sensor_name = db.Column(db.String(100), nullable=False)
-    value = db.Column(db.Float, nullable=False)
-    timestamp = db.Column(db.DateTime, nullable=False)
+    name = db.Column(db.String(100), nullable=False)
+    unit = db.Column(db.String(10), nullable=False)
+    # value = db.Column(db.Float, nullable=False)
+    # timestamp = db.Column(db.DateTime, nullable=False)
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'name': self.name,
+            'unit': self.unit,
+        }

@@ -7,6 +7,8 @@ from werkzeug.security import check_password_hash, generate_password_hash
 
 from models import db, User, SensorData
 
+import uuid
+
 app = Flask(__name__)
 # Configuration CORS
 
@@ -47,9 +49,6 @@ jwt = JWTManager(app)
 
 
 ###############################################""
-
-# Simulons une base de données en mémoire
-sensors = []
 
 
 @app.route('/hello_world')
@@ -125,35 +124,6 @@ def login():
 
 ################# SENSORS ##################
 
-@app.route('/api/sensors', methods=['POST'])
-def add_sensor():
-    data = request.json
-    sensors.append(data)
-    return jsonify({"message": "Capteur ajouté avec succès", "sensor": data}), 201
-
-@app.route('/api/sensors', methods=['GET'])
-def get_sensors():
-    return jsonify(sensors)
-
-# if __name__ == '__main__':
-#     app.run(debug=True)
-
-if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000, debug=True)
-
-
-
-
-
-
-
-
-
-########################## A FINIR ################
-# Création de la base de données (au démarrage uniquement pour dev)
-@app.before_first_request
-def create_tables():
-    db.create_all()
 
 # Endpoint pour obtenir tous les capteurs
 @app.route('/api/sensors', methods=['GET'])
@@ -161,17 +131,31 @@ def get_sensors():
     sensors = SensorData.query.all()
     return jsonify([sensor.to_dict() for sensor in sensors])
 
+
+
 # Endpoint pour ajouter un capteur
+# REFAIRE LES SSENSORS APRES
 @app.route('/api/sensors', methods=['POST'])
 def add_sensor():
     data = request.json
+    name = data.get('name')
+    # uid = uuid.uuid4()
+    unit = data.get('unit')
+    # frequency = 5
+    # frequency = data.get('frequency')
     new_sensor = SensorData(
-        name=data['name'],
-        uid=data['uid'],
-        unit=data['unit'],
-        frequency=data['frequency']
+        name=name,
+        unit=unit
     )
     db.session.add(new_sensor)
     db.session.commit()
-    return jsonify(new_sensor.to_dict()), 201
+
+    return jsonify({"message": "Capteur ajouté avec succès", "sensor": new_sensor.to_dict()}), 201
+
+
+########################## A FINIR ################
+# Création de la base de données (au démarrage uniquement pour dev)
+
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=5000, debug=True)
 

@@ -49,6 +49,9 @@ const router = VueRouter.createRouter({
     },
   ]
 })
+//  path: '/:pathMatch(.*)*'
+
+
 
 
 // Création de l'application Vue et utilisation du routeur

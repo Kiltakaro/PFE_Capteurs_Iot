@@ -1,22 +1,24 @@
 <template>
-    <div class="login">
-      <h2>Connexion</h2>
-      <router-link to="/">Home</router-link>
+  <div class="flex items-center justify-center min-h-screen bg-gray-100">
+    <div class="bg-white p-8 rounded shadow-md w-full max-w-md">
+      <h2 class="text-2xl font-bold mb-6 text-center">Connexion</h2>
+      <router-link to="/" class="text-blue-500 hover:underline mb-4 block text-center">Home</router-link>
 
-      <form @submit.prevent="login">
+      <form @submit.prevent="login" class="space-y-4">
         <div>
-          <label for="username">Nom d'utilisateur</label>
-          <input v-model="credentials.username" type="text" id="username" required />
+          <label for="username" class="block text-gray-700">Nom d'utilisateur</label>
+          <input v-model="credentials.username" type="text" id="username" required class="w-full p-2 border border-gray-300 rounded mt-1" />
         </div>
         <div>
-          <label for="password">Mot de passe</label>
-          <input v-model="credentials.password" type="password" id="password" required />
+          <label for="password" class="block text-gray-700">Mot de passe</label>
+          <input v-model="credentials.password" type="password" id="password" required class="w-full p-2 border border-gray-300 rounded mt-1" />
         </div>
-        <button type="submit">Se connecter</button>
+        <button type="submit" class="w-full bg-blue-500 text-white p-2 rounded hover:bg-blue-700 transition">Se connecter</button>
       </form>
-      <p v-if="errorMessage" class="error">{{ errorMessage }}</p>
+      <p v-if="errorMessage" class="text-red-500 mt-4 text-center">{{ errorMessage }}</p>
     </div>
-  </template>
+  </div>
+</template>
   
   <script>
   import axios from "axios";

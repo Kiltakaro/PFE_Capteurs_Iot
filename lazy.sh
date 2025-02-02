@@ -1,2 +1,1 @@
-docker compose down
-docker compose up
+sudo docker-compose down && sudo docker-compose build --no-cache && sudo docker-compose up --force-recreate

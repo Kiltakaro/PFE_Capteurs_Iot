@@ -12,6 +12,9 @@ import AdminDashboard from './components/AdminDashboard.vue'
 import IotSensors from './components/IotSensors.vue'
 import NotFound from './components/NotFound.vue'
 
+import './assets/tailwind.css';
+
+
 // Configuration du routeur directement dans main.js
 const router = VueRouter.createRouter({
   history: VueRouter.createWebHistory(), // Utilisation de l'historique web (naviguer sans recharger la page)

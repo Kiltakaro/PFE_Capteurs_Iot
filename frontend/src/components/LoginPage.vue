@@ -47,6 +47,9 @@ export default {
       try {
         const response = await axios.post(`http://${ip}:5000/api/login`, this.credentials);
         localStorage.setItem("token", response.data.token); // Sauvegarde du token JWT dans le localStorage
+        console.log(response.data);
+        console.log(response)
+        console.log("Connecté avec succès Token : ", response.data.token);
         this.$router.push("/"); // Redirige vers la page d'accueil après la connexion
       } catch (error) {
         console.error("Erreur lors de la connexion :", error);
@@ -58,31 +61,5 @@ export default {
 };
 </script>
 
-<style scoped>
-.login {
-  max-width: 400px;
-  margin: 0 auto;
-}
-
-form {
-  display: flex;
-  flex-direction: column;
-}
-
-input {
-  margin: 10px 0;
-  padding: 8px;
-  font-size: 1rem;
-}
-
-button {
-  padding: 10px;
-  background-color: #28a745;
-  color: white;
-  font-size: 1rem;
-}
-
-.error {
-  color: red;
-}
+<style>
 </style>

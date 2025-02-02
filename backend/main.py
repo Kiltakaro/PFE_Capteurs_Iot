@@ -83,6 +83,18 @@ def add_user():
 
 # ROute a proteger je pense
 @app.route('/api/users', methods=['GET'])
+# @jwt_required()
+# def get_user():
+#     current_user = get_jwt_identity()
+#     user = User.query.filter_by(username=current_user).first()
+#     if not user:
+#         return jsonify({"msg": "User not found"}), 404
+#     return jsonify({
+#         "username": user.username,
+#         "email": user.email,
+#         "is_admin": user.is_admin
+#     }), 200
+
 def get_users():
     users = User.query.all()
     return jsonify([{
@@ -95,7 +107,10 @@ def get_users():
 # Ajouter sécurité
 @app.route('/api/users/<int:user_id>', methods=['DELETE'])
 def delete_user(user_id):
-    user = User.query.get(user_id)
+    
+    # user = User.query.get(user_id) # LEGACY CODE
+
+    user = db.session.get(User, user_id)
     if not user:
         return jsonify({"error": "User not found"}), 404
 
@@ -116,8 +131,10 @@ def login():
     print(user)
     if user and check_password_hash(user.password, password):
         # Créer un token d'accès
-        access_token = create_access_token(identity=username)
-        return jsonify(access_token=access_token), 200
+        token = create_access_token(identity=username)
+        token = str(token)
+        print(token)
+        return jsonify(token=token), 200
 
     return jsonify({"msg": "Nom d'utilisateur ou mot de passe incorrect."}), 401
 
@@ -152,6 +169,15 @@ def add_sensor():
 
     return jsonify({"message": "Capteur ajouté avec succès", "sensor": new_sensor.to_dict()}), 201
 
+@app.route('/api/sensors/<int:sensor_id>', methods=['DELETE'])
+def delete_sensor(sensor_id):
+    sensor = SensorData.query.get(sensor_id)
+    if not sensor:
+        return jsonify({"error": "Capteur inconnu"}), 404
+
+    db.session.delete(sensor)
+    db.session.commit()
+    return jsonify({"message": "Capteur supprimé"}), 200
 
 ########################## A FINIR ################
 # Création de la base de données (au démarrage uniquement pour dev)

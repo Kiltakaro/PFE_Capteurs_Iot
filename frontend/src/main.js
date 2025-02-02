@@ -11,8 +11,9 @@ import LoginPage from './components/LoginPage.vue'
 import AdminDashboard from './components/AdminDashboard.vue'
 import IotSensors from './components/IotSensors.vue'
 import NotFound from './components/NotFound.vue'
+import UserProfile from './components/UserProfile.vue'
 
-import './assets/tailwind.css';
+import './assets/tailwind.css'; // Pas toucher, SANS ça pas de tailwindcss
 
 
 // Configuration du routeur directement dans main.js
@@ -22,12 +23,12 @@ const router = VueRouter.createRouter({
     {
       path: '/',
       name: 'Home',
-      component: HelloWorld  // Définition de la route pour HelloWorld
+      component: HelloWorld
     },
     {
       path: '/mycomponent',
       name: 'MyComponent',
-      component: MyComponent  // Définition de la route pour MyComponent
+      component: MyComponent
     },
     {
       path:'/login',
@@ -44,6 +45,11 @@ const router = VueRouter.createRouter({
       path:'/sensors',
       name: 'SensorsPage',
       component: IotSensors
+    },
+    {
+      path: '/userprofile',
+      name: 'UserProfile',
+      component: UserProfile
     },
     {
       path: '/*', // Capture toutes les routes non définies

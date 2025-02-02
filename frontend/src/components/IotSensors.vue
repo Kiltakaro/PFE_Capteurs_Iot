@@ -1,7 +1,5 @@
 <template>
   
-  <MyComponent />
-
   <div class="container mx-auto p-4">
 
     <h1 class="text-3xl font-bold mb-4">Gestion des Capteurs IoT</h1>
@@ -30,15 +28,11 @@
 
 <script>
 import axios from "axios";
-import MyComponent from "./MyComponent.vue";
 // import { useRouter } from 'vue-router';
 
 const ip = 'localhost'; // Remplacez 'backend' par localhost si tests sans docker
 
 export default {
-  components: {
-    MyComponent,
-  },
 
   data() {
     return {

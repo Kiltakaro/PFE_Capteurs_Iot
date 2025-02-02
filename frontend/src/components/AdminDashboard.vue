@@ -15,10 +15,10 @@
       </thead>
       <tbody>
         <tr v-for="user in users" :key="user.id" class="hover:bg-gray-100">
-          <td class="py-2 px-4 border-b">{{ user.id }}</td>
-          <td class="py-2 px-4 border-b">{{ user.username }}</td>
-          <td class="py-2 px-4 border-b">{{ user.is_admin ? 'Admin' : 'User' }}</td>
-          <td class="py-2 px-4 border-b">
+          <td class="py-2 px-4 border-b text-center">{{ user.id }}</td>
+          <td class="py-2 px-4 border-b text-center">{{ user.username }}</td>
+          <td class="py-2 px-4 border-b text-center">{{ user.is_admin ? 'Admin' : 'User' }}</td>
+          <td class="py-2 px-4 border-b text-center">
             <button @click="deleteUser(user.id)" class="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-700 transition">Supprimer</button>
           </td>
         </tr>

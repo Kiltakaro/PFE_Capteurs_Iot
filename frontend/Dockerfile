@@ -10,6 +10,7 @@ COPY package*.json ./
 RUN npm install
 RUN npm install vue-router
 RUN npm install -D tailwindcss@3 postcss autoprefixer
+# RUN npm install paho-mqtt
 
 COPY . .
 

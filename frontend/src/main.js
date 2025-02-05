@@ -12,6 +12,7 @@ import AdminDashboard from './components/AdminDashboard.vue'
 import IotSensors from './components/IotSensors.vue'
 import NotFound from './components/NotFound.vue'
 import UserProfile from './components/UserProfile.vue'
+// import MqttTest from './components/MqttTest.vue'
 
 import './assets/tailwind.css'; // Pas toucher, SANS ça pas de tailwindcss
 
@@ -51,6 +52,11 @@ const router = VueRouter.createRouter({
       name: 'UserProfile',
       component: UserProfile
     },
+    // {
+    //   path: '/mqtttest',
+    //   name: 'MqttTest',
+    //   component: MqttTest
+    // },
     {
       path: '/*', // Capture toutes les routes non définies
       name: 'NotFound',

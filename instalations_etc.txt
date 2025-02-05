@@ -1,6 +1,11 @@
 
+C'EST PAS POUR VOUS CEST POUR QUE JE MEN SOUVIENNE POUR LES DOCKERFILE
+
 npm install -g @vue/cli
 npm install axios
+
+pip install paho-mqtt
+npm install paho-mqtt
 
 cd frontend
 npm run build

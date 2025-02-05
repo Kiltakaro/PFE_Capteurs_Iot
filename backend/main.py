@@ -1,15 +1,21 @@
 from flask import Flask, jsonify, request
 from flask_cors import CORS
 from flask_sqlalchemy import SQLAlchemy
-from flask_jwt_extended import JWTManager, create_access_token, jwt_required
+from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity
 from werkzeug.security import check_password_hash, generate_password_hash
 
 
-from models import db, User, SensorData
+from threading import Thread
 
+import os
 import uuid
 
+# from mqtt_client import start_mqtt
+
+from models import db, User, SensorData
+
 app = Flask(__name__)
+
 # Configuration CORS
 
 origins = [
@@ -30,12 +36,31 @@ CORS(app, resources={r"/api/*": {"origins": "*"}}, supports_credentials=True)
 # CORS(app, resources={r"/*": {"origins": origins}}, supports_credentials=True)
 
 
-
 ############## TEST BASE DE DONNES SQLLITE ###############
 
 # Configuration de la base de données
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///app.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+################### POUR POSTGRESQL #####################
+# ##### Connexion à postgresql db
+# db_connection = psycopg2.connect(
+#     host="database",
+#     user="user",
+#     password="password",
+#     dbname="senseorDb"
+# )
+
+# cursor = db_connection.cursor()
+# ####
+
+################### POUR MQTT #####################
+
+# Désactiver la connexion MQTT si nécessaire
+# if os.environ.get('DISABLE_MQTT') != '1':
+#     from mqtt_client import start_mqtt
+#     start_mqtt()
+
 
 db.init_app(app)
 
@@ -48,7 +73,7 @@ app.config["JWT_SECRET_KEY"] = "super-secret-key"  # À changer avec une vraie c
 jwt = JWTManager(app)
 
 
-###############################################""
+######################################################
 
 
 @app.route('/hello_world')
@@ -56,10 +81,10 @@ def hello_world():
     return "Hello world !"
 
 
-#################### ACCOUNTS #####################
-
+######################  ACCOUNTS #######################
+#####################  CRUD  USER  #####################
 @app.route('/api/users/create', methods=['POST'])
-def add_user():
+def create_user():
     data = request.json
     username = data.get('username')
     password = data.get('password')
@@ -68,7 +93,7 @@ def add_user():
     if not username or not password:
         return jsonify({"error": "Username and password are required"}), 400
 
-    # Vérification si l'utilisateur existe déjà
+    # Vérification si le nom d'utilisateur existe déjà
     if User.query.filter_by(username=username).first():
         return jsonify({"error": "User already exists"}), 400
 
@@ -83,19 +108,7 @@ def add_user():
 
 # ROute a proteger je pense
 @app.route('/api/users', methods=['GET'])
-# @jwt_required()
-# def get_user():
-#     current_user = get_jwt_identity()
-#     user = User.query.filter_by(username=current_user).first()
-#     if not user:
-#         return jsonify({"msg": "User not found"}), 404
-#     return jsonify({
-#         "username": user.username,
-#         "email": user.email,
-#         "is_admin": user.is_admin
-#     }), 200
-
-def get_users():
+def read_users():
     users = User.query.all()
     return jsonify([{
         "id": user.id,
@@ -104,12 +117,51 @@ def get_users():
     } for user in users]), 200
 
 
+# CELLE DU DESSUS CEST POUR TOUS LES USERS
+# CELLE DU DESSOUS C'EST POUR SEULEMENT CELUI QUI EST CONNECTE
+# Route pour récupérer les informations de l'utilisateur connecté
+@app.route('/api/user', methods=['GET'])
+@jwt_required()
+def read_user():
+    current_user = get_jwt_identity()
+    user = User.query.filter_by(username=current_user).first()
+    if not user:
+        return jsonify({"msg": "User not found"}), 404
+    return jsonify({
+        "id": user.id,
+        "username": user.username,
+        "is_admin": user.is_admin
+    }), 200
+
+# Il faudra peut etre rajouter un cas ou c'est l'admin qui veut modifier
+# Route pour mettre à jour un utilisateur
+@app.route('/api/user', methods=['PUT'])
+@jwt_required()
+def update_user():
+    current_user = get_jwt_identity()
+    user = User.query.filter_by(username=current_user).first()
+    if not user:
+        return jsonify({"msg": "User not found"}), 404
+
+    data = request.json
+    username = data.get('username')
+    password = data.get('password')
+
+    if username:
+        user.username = username
+    if password:
+        user.set_password(password)
+
+    db.session.commit()
+    return jsonify({"message": "User updated successfully"}), 200
+
+
+
+
 # Ajouter sécurité
 @app.route('/api/users/<int:user_id>', methods=['DELETE'])
 def delete_user(user_id):
     
-    # user = User.query.get(user_id) # LEGACY CODE
-
     user = db.session.get(User, user_id)
     if not user:
         return jsonify({"error": "User not found"}), 404
@@ -119,6 +171,8 @@ def delete_user(user_id):
     return jsonify({"message": "User deleted successfully"}), 200
 
 
+######################  LOGIN  #######################
+
 @app.route('/api/login', methods=['POST'])
 def login():
 
@@ -127,8 +181,7 @@ def login():
 
     # Vérifier si l'utilisateur existe dans la base de données
     user = User.query.filter_by(username=username).first()
-    print("test")
-    print(user)
+
     if user and check_password_hash(user.password, password):
         # Créer un token d'accès
         token = create_access_token(identity=username)
@@ -139,7 +192,7 @@ def login():
     return jsonify({"msg": "Nom d'utilisateur ou mot de passe incorrect."}), 401
 
 
-################# SENSORS ##################
+############################## SENSORS ###############################
 
 
 # Endpoint pour obtenir tous les capteurs
@@ -158,8 +211,7 @@ def add_sensor():
     name = data.get('name')
     # uid = uuid.uuid4()
     unit = data.get('unit')
-    # frequency = 5
-    # frequency = data.get('frequency')
+
     new_sensor = SensorData(
         name=name,
         unit=unit
@@ -182,6 +234,9 @@ def delete_sensor(sensor_id):
 ########################## A FINIR ################
 # Création de la base de données (au démarrage uniquement pour dev)
 
+
 if __name__ == '__main__':
+    # Lancer MQTT en parallèle de Flask
+    # Thread(target=start_mqtt, daemon=True).start()
     app.run(host='0.0.0.0', port=5000, debug=True)
 

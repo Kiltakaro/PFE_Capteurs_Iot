@@ -1,4 +1,5 @@
 <template>
+  <NavBar />
   
   <div class="container mx-auto p-4">
 
@@ -28,11 +29,15 @@
 
 <script>
 import axios from "axios";
-// import { useRouter } from 'vue-router';
+import NavBar from "./NavBar.vue";
 
-const ip = 'localhost'; // Remplacez 'backend' par localhost si tests sans docker
+const ip = 'localhost'; 
 
 export default {
+
+  components: {
+    NavBar
+  },
 
   data() {
     return {

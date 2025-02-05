@@ -7,18 +7,14 @@
             <router-link class="hover:text-gray-300 text-lg" to="/mycomponent">MyComponent</router-link>
             <router-link class="hover:text-gray-300 text-lg" to="/admindashboard">AdminDashboard</router-link>
             <router-link class="hover:text-gray-300 text-lg" to="/sensors">SensorsPage</router-link>
+            <router-link class="hover:text-gray-300 text-lg" to="/mqtttest">MqttTest</router-link>
         </div>
         <div class="space-x-4">
             <router-link class="hover:text-gray-300" to="/">Accueil</router-link>
-            <router-link v-if="isLoggedIn" class="hover:text-gray-300" to="/login">Se connecter</router-link>
-            <router-link v-if="!isLoggedIn" class="hover:text-gray-300" to="/userprofile">🧑 Profil</router-link>
-            <button v-if="!isLoggedIn" @click="logout" class="bg-red-500 px-4 py-2 rounded hover:bg-red-700 transition">
-                Déconnexion
-            </button>
-            <router-link v-if="!isLoggedIn" class="hover:text-gray-300" to="/login">Se connecter2</router-link>
-            <router-link v-if="isLoggedIn" class="hover:text-gray-300" to="/userprofile">🧑 Profil2</router-link>
+            <router-link v-if="!isLoggedIn" class="hover:text-gray-300" to="/login">Se connecter</router-link>
+            <router-link v-if="isLoggedIn" class="hover:text-gray-300" to="/userprofile">🧑 Profil</router-link>
             <button v-if="isLoggedIn" @click="logout" class="bg-red-500 px-4 py-2 rounded hover:bg-red-700 transition">
-                Déconnexion2
+                Déconnexion
             </button>
         </div>
     </nav>
@@ -27,7 +23,6 @@
 <script>
 export default {
     name: 'NavBar',
-
     data() {
         return {
             loggedIn: localStorage.getItem('token') !== null

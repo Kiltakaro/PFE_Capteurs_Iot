@@ -1,4 +1,5 @@
 <template>
+  <NavBar/>
   <div>
     <h1>Hello W0rld</h1>
     <ul>
@@ -12,8 +13,14 @@
 </template>
 
 <script>
+import NavBar from './NavBar.vue';
+
 export default {
-  name: 'HelloWorld'
+  name: 'HelloWorld',
+
+  components: {
+    NavBar
+  }
 }
 </script>
 

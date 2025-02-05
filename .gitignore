@@ -6,9 +6,22 @@ node_modules
 /dist
 frontend/.gitignore
 frontend/node_modules
+frontend/src/mqtt.js
+frontend/src/components/MqttTest.vue
 
 mosquitto/log
 mosquitto/data
+
+backend/.venv/
+backend/__pycache__/
+backend/app.py
+backend/init_db.py
+backend/instance/
+backend/instance/app.db
+backend/mqtt_client.py
+
+database/
+
 
 # local env files
 .env.local

@@ -13,7 +13,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 EXPOSE 5000
 
 # Pour avoir des comptes de test
-RUN python init_db.py
+# RUN python init_db.py
 
 # Commande pour démarrer Flask
 CMD ["python", "main.py"]

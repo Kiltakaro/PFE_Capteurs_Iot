@@ -1,4 +1,5 @@
 <template>
+  <NavBar />
   <div class="dashboard p-8 bg-gray-100 min-h-screen">
     <h1 class="text-3xl font-bold mb-6">Tableau de bord Admin</h1>
 
@@ -44,10 +45,18 @@
   
 <script>
 import axios from 'axios';
+import NavBar from './NavBar.vue';
+
 const ip = 'localhost'
+
 
 export default {
   name: 'AdminDashboard',
+
+  components: {
+    NavBar
+  },
+
   data() {
     return {
       users: [],

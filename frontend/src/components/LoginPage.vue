@@ -1,4 +1,7 @@
 <template>
+  <NavBar/>
+
+
   <div class="flex items-center justify-center min-h-screen bg-gray-100">
     <div class="bg-white p-8 rounded shadow-md w-full max-w-md">
       <h2 class="text-2xl font-bold mb-6 text-center">Connexion</h2>
@@ -28,9 +31,15 @@ import axios from "axios";
 
 const ip = 'localhost'; // Remplacez 'backend' par localhost si tests sans docker
 
+
+import NavBar from './NavBar.vue';
 export default {
 
   name: 'LoginPage',
+
+  components: {
+    NavBar
+  },
 
   data() {
     return {

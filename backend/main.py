@@ -14,6 +14,10 @@ import uuid
 
 from models import db, User, SensorData
 
+import time
+
+time.sleep(5)
+
 app = Flask(__name__)
 
 # Configuration CORS
@@ -39,20 +43,10 @@ CORS(app, resources={r"/api/*": {"origins": "*"}}, supports_credentials=True)
 ############## TEST BASE DE DONNES SQLLITE ###############
 
 # Configuration de la base de données
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///app.db'
+# app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///app.db'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://user:password@database:5432/sensorDb'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
-################### POUR POSTGRESQL #####################
-# ##### Connexion à postgresql db
-# db_connection = psycopg2.connect(
-#     host="database",
-#     user="user",
-#     password="password",
-#     dbname="senseorDb"
-# )
-
-# cursor = db_connection.cursor()
-# ####
 
 ################### POUR MQTT #####################
 

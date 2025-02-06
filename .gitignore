@@ -14,13 +14,9 @@ mosquitto/data
 
 backend/.venv/
 backend/__pycache__/
-backend/app.py
-backend/init_db.py
 backend/instance/
 backend/instance/app.db
 backend/mqtt_client.py
-
-database/
 
 
 # local env files

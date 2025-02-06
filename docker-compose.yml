@@ -14,8 +14,6 @@ services:
       FLASK_ENV: development
     networks:
       - app-network
-    # command: >
-    #   sh -c "python main.py & sleep 5 && python init_db.py"
 
   frontend:
     container_name: frontend
@@ -46,24 +44,24 @@ services:
   #   networks:
   #     - app-network
     
-  # database:
-  #   build:
-  #     context: ./database
-  #     dockerfile: Dockerfile
-  #   container_name: database
-  #   environment:
-  #     POSTGRES_DB: sensorDb
-  #     POSTGRES_USER: user
-  #     POSTGRES_PASSWORD: password
-  #     POSTGRES_HOST_AUTH_METHOD: trust
-  #   restart: unless-stopped
-  #   ports:
-  #     - "5433:5432"
-  #   volumes:
-  #     - db_data:/var/lib/postgresql/data
-  #     - ./database/db_postgres.sql:/docker-entrypoint-initdb.d/db_postgres.sql
-  #   networks:
-  #     - app-network
+  database:
+    build:
+      context: ./database
+      dockerfile: Dockerfile
+    container_name: database
+    environment:
+      POSTGRES_DB: sensorDb
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_HOST_AUTH_METHOD: trust
+    restart: unless-stopped
+    ports:
+      - "5433:5432"
+    volumes:
+      - db_data:/var/lib/postgresql/data
+      - ./database/database.sql:/docker-entrypoint-initdb.d/database.sql
+    networks:
+      - app-network
 
 
 volumes:

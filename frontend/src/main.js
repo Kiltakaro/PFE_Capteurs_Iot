@@ -6,12 +6,12 @@ import * as VueRouter from 'vue-router'
 
 // Importation des composants pour les routes
 import MyComponent from './components/MyComponent.vue'
-import HelloWorld from './components/HelloWorld.vue'
 import LoginPage from './components/LoginPage.vue'
 import AdminDashboard from './components/AdminDashboard.vue'
 import IotSensors from './components/IotSensors.vue'
 import NotFound from './components/NotFound.vue'
 import UserProfile from './components/UserProfile.vue'
+import HomeComponent from './components/HomeComponent.vue'
 // import MqttTest from './components/MqttTest.vue'
 
 import './assets/tailwind.css'; // Pas toucher, SANS ça pas de tailwindcss
@@ -19,12 +19,13 @@ import './assets/tailwind.css'; // Pas toucher, SANS ça pas de tailwindcss
 
 // Configuration du routeur directement dans main.js
 const router = VueRouter.createRouter({
+  // on enlevera peut etre ça, c'est assez chiant du moins en dev
   history: VueRouter.createWebHistory(), // Utilisation de l'historique web (naviguer sans recharger la page)
   routes: [
     {
       path: '/',
       name: 'Home',
-      component: HelloWorld
+      component: HomeComponent
     },
     {
       path: '/mycomponent',

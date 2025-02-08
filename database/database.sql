@@ -1,3 +1,6 @@
+-- Installation de pgcrypto pour générer des UUIDs
+CREATE EXTENSION IF NOT EXISTS "pgcrypto";
+
 CREATE TABLE users (
     id SERIAL PRIMARY KEY,
     username VARCHAR(80) UNIQUE NOT NULL,
@@ -5,9 +8,21 @@ CREATE TABLE users (
     is_admin BOOLEAN DEFAULT FALSE
 );
 
--- Subject to changes
+-- Changements a apporter
 CREATE TABLE sensor_data (
-    id SERIAL PRIMARY KEY,
-    name VARCHAR(100) NOT NULL,
-    unit VARCHAR(10) NOT NULL
+    uid UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    
+    name VARCHAR(100) NOT NULL, -- N'est pas dans l'exemple mais est demandée 
+
+    description VARCHAR(255),
+    unit VARCHAR(10) NOT NULL,
+    min_value FLOAT,
+    max_value FLOAT,
+    delta_value FLOAT,
+    period INTEGER,
+    min_period INTEGER,
+    max_period INTEGER,
+    read_only BOOLEAN DEFAULT FALSE,
+    value FLOAT,
+    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );

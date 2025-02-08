@@ -203,17 +203,37 @@ def get_sensors():
 def add_sensor():
     data = request.json
     name = data.get('name')
-    # uid = uuid.uuid4()
     unit = data.get('unit')
+    description = data.get('description')
+    min_value = data.get('min_value')
+    max_value = data.get('max_value')
+    delta_value = data.get('delta_value')
+    period = data.get('period')
+    min_period = data.get('min_period')
+    max_period = data.get('max_period')
+    read_only = data.get('read_only', False)
+    value = data.get('value')
 
     new_sensor = SensorData(
         name=name,
-        unit=unit
+        unit=unit,
+        description=description,
+        min_value=min_value,
+        max_value=max_value,
+        delta_value=delta_value,
+        period=period,
+        min_period=min_period,
+        max_period=max_period,
+        read_only=read_only,
+        value=value
     )
     db.session.add(new_sensor)
     db.session.commit()
 
     return jsonify({"message": "Capteur ajouté avec succès", "sensor": new_sensor.to_dict()}), 201
+
+
+
 
 @app.route('/api/sensors/<int:sensor_id>', methods=['DELETE'])
 def delete_sensor(sensor_id):

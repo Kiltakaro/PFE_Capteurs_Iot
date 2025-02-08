@@ -233,17 +233,44 @@ def add_sensor():
     return jsonify({"message": "Capteur ajouté avec succès", "sensor": new_sensor.to_dict()}), 201
 
 
-
-
-@app.route('/api/sensors/<int:sensor_id>', methods=['DELETE'])
-def delete_sensor(sensor_id):
-    sensor = SensorData.query.get(sensor_id)
+# Route pour supprimer un capteur
+@app.route('/api/sensors/<uuid:uid>', methods=['DELETE'])
+def delete_sensor(uid):
+    sensor = SensorData.query.filter_by(uid=uid).first()
     if not sensor:
         return jsonify({"error": "Capteur inconnu"}), 404
 
     db.session.delete(sensor)
     db.session.commit()
     return jsonify({"message": "Capteur supprimé"}), 200
+
+
+# Route pour mettre à jour un capteur
+# NON UTILISABLE
+# Ne fonctionne pas caro n modifie pas comme ça dans le front
+# on ne modifie peut etre pas la valeur etc, je sais pas comment on simule les capteurs
+@app.route('/api/sensors/<uuid:uid>', methods=['PUT'])
+def update_sensor(uid):
+    sensor = SensorData.query.filter_by(uid=uid).first()
+    if not sensor:
+        return jsonify({"error": "Capteur inconnu"}), 404
+
+    data = request.json
+    sensor.name = data.get('name', sensor.name)
+    sensor.unit = data.get('unit', sensor.unit)
+    sensor.description = data.get('description', sensor.description)
+    sensor.min_value = data.get('min_value', sensor.min_value)
+    sensor.max_value = data.get('max_value', sensor.max_value)
+    sensor.delta_value = data.get('delta_value', sensor.delta_value)
+    sensor.period = data.get('period', sensor.period)
+    sensor.min_period = data.get('min_period', sensor.min_period)
+    sensor.max_period = data.get('max_period', sensor.max_period)
+    sensor.read_only = data.get('read_only', sensor.read_only)
+    sensor.value = data.get('value', sensor.value)
+
+    db.session.commit()
+    return jsonify({"message": "Capteur mis à jour avec succès", "sensor": sensor.to_dict()}), 200
+
 
 ########################## A FINIR ################
 # Création de la base de données (au démarrage uniquement pour dev)

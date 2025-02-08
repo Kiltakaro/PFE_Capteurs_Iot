@@ -5,13 +5,13 @@ import App from './App.vue'
 import * as VueRouter from 'vue-router'
 
 // Importation des composants pour les routes
-import MyComponent from './components/MyComponent.vue'
 import LoginPage from './components/LoginPage.vue'
 import AdminDashboard from './components/AdminDashboard.vue'
 import IotSensors from './components/IotSensors.vue'
 import NotFound from './components/NotFound.vue'
 import UserProfile from './components/UserProfile.vue'
 import HomeComponent from './components/HomeComponent.vue'
+import SensorManaging from './components/SensorManaging.vue'
 // import MqttTest from './components/MqttTest.vue'
 
 import './assets/tailwind.css'; // Pas toucher, SANS ça pas de tailwindcss
@@ -28,9 +28,9 @@ const router = VueRouter.createRouter({
       component: HomeComponent
     },
     {
-      path: '/mycomponent',
-      name: 'MyComponent',
-      component: MyComponent
+      path: '/sensormanaging',
+      name: 'SensorManaging',
+      component: SensorManaging
     },
     {
       path:'/login',

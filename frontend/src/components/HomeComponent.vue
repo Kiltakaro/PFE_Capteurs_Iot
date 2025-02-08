@@ -7,14 +7,14 @@
       
       <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-8">
         <div class="bg-white p-6 rounded-lg shadow-md">
-          <h2 class="text-2xl font-bold mb-2">Gestion des utilisateurs</h2>
-          <p>Ajoutez, modifiez et supprimez des utilisateurs.</p>
-          <router-link to="/users" class="text-blue-500 hover:underline mt-4 inline-block">Voir plus</router-link>
+          <h2 class="text-2xl font-bold mb-2">Gestion des capteurs</h2>
+          <p>Ajoutez des capteurs.</p>
+          <router-link to="/sensors" class="text-blue-500 hover:underline mt-4 inline-block">Voir plus</router-link>
         </div>
         <div class="bg-white p-6 rounded-lg shadow-md">
           <h2 class="text-2xl font-bold mb-2">Gestion des capteurs</h2>
-          <p>Ajoutez, modifiez et supprimez des capteurs.</p>
-          <router-link to="/sensors" class="text-blue-500 hover:underline mt-4 inline-block">Voir plus</router-link>
+          <p>Modifiez et supprimez des capteurs.</p>
+          <router-link to="/sensormanaging" class="text-blue-500 hover:underline mt-4 inline-block">Voir plus</router-link>
         </div>
         <div class="bg-white p-6 rounded-lg shadow-md">
           <h2 class="text-2xl font-bold mb-2">Tests MQTT</h2>

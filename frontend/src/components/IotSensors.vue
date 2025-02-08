@@ -5,6 +5,12 @@
     <h1 class="text-3xl font-bold mb-4">Gestion des Capteurs IoT</h1>
 
     <form @submit.prevent="addSensor" class="mb-6 space-y-4">
+      <div v-if="alertMessage" class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative" role="alert">
+        <span class="block sm:inline">{{ alertMessage }}</span>
+      </div>
+      <div v-if="errorMessage" class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">
+        <span class="block sm:inline">{{ errorMessage }}</span>
+      </div>
       <div>
         <input v-model="newSensor.name" type="text" placeholder="Nom du capteur" required
           class="w-full p-2 border border-gray-300 rounded" />
@@ -58,13 +64,6 @@
       <button type="submit" class="w-full bg-green-500 text-white p-2 rounded hover:bg-green-700 transition">Ajouter le
         capteur</button>
     </form>
-
-    <h2 class="text-2xl font-bold mb-4">Liste des capteurs :</h2>
-    <ul class="list-disc pl-5">
-      <li v-for="sensor in sensors" :key="sensor.uid" class="mb-2">
-        {{ sensor.name }} | ({{ sensor.unit }})
-      </li>
-    </ul>
   </div>
 </template>
 
@@ -94,7 +93,8 @@ export default {
         read_only: false,
         value: null
       },
-      sensors: [],
+      alertMessage: "",
+      errorMessage: "",
       units: [
         "m", "kg", "s", "A", "K", "mol", "cd", "Hz", "rad", "sr", "N", "Pa", "J", "W", "C", "V", "F", "Ω", "S", "Wb", "T", "H", "°C", "lm", "lx", "Bq", "Gy", "Sv", "kat"
       ]
@@ -103,10 +103,19 @@ export default {
 
   methods: {
     async addSensor() {
+      this.alertMessage = "";
+      this.errorMessage = "";
+
+      // Vérifier si tous les champs sont remplis
+      if (!this.newSensor.name || !this.newSensor.unit) {
+        this.errorMessage = "Veuillez remplir tous les champs obligatoires.";
+        return;
+      }
+
       try {
         const response = await axios.post(`http://${ip}:5000/api/sensors`, this.newSensor);
         console.log(response.data.message);
-        this.fetchSensors();
+        this.alertMessage = "Capteur ajouté avec succès.";
         this.newSensor = { 
           name: "", 
           unit: "", 
@@ -122,23 +131,12 @@ export default {
         };
       } catch (error) {
         console.error("Erreur lors de l'ajout du capteur :", error);
+        this.errorMessage = "Erreur lors de l'ajout du capteur.";
       }
     },
-
-    async fetchSensors() {
-      try {
-        const response = await axios.get(`http://${ip}:5000/api/sensors`);
-        this.sensors = response.data;
-      } catch (error) {
-        console.error("Erreur lors de la récupération des capteurs :", error);
-      }
-    },
-  },
-
-  mounted() {
-    this.fetchSensors();
   },
 };
+
 </script>
 
 <style>

@@ -4,9 +4,9 @@
             <router-link to="/">🏠 Accueil</router-link>
         </div>
         <div class="space-x-4 flex-1 text-center">
-            <router-link class="hover:text-gray-300 text-lg" to="/mycomponent">MyComponent</router-link>
             <router-link class="hover:text-gray-300 text-lg" to="/admindashboard">AdminDashboard</router-link>
             <router-link class="hover:text-gray-300 text-lg" to="/sensors">SensorsPage</router-link>
+            <router-link class="hover:text-gray-300 text-lg" to="/sensormanaging">SensorManaging</router-link>
             <router-link class="hover:text-gray-300 text-lg" to="/mqtttest">MqttTest</router-link>
         </div>
         <div class="space-x-4">

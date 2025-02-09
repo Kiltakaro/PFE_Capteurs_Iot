@@ -1,0 +1,8 @@
+flask
+flask-cors
+Flask-SQLAlchemy
+psycopg2-binary
+Werkzeug
+SQLAlchemy
+flask-jwt-extended
+paho-mqtt

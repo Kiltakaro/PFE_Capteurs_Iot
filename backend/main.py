@@ -245,6 +245,18 @@ def delete_sensor(uid):
     return jsonify({"message": "Capteur supprimé"}), 200
 
 
+# Route pour récupérer un capteur spécifique
+@app.route('/api/sensors/<uuid:uid>', methods=['GET'])
+def get_sensor(uid):
+    sensor = SensorData.query.filter_by(uid=uid).first()
+    if not sensor:
+        return jsonify({"error": "Capteur inconnu"}), 404
+
+    return jsonify(sensor.to_dict()), 200
+
+
+
+
 # Route pour mettre à jour un capteur
 # NON UTILISABLE
 # Ne fonctionne pas caro n modifie pas comme ça dans le front

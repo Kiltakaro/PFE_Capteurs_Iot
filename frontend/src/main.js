@@ -15,6 +15,7 @@ import SensorManaging from './components/SensorManaging.vue'
 // import MqttTest from './components/MqttTest.vue'
 
 import './assets/tailwind.css'; // Pas toucher, SANS ça pas de tailwindcss
+import EditSensor from './components/EditSensor.vue'
 
 
 // Configuration du routeur directement dans main.js
@@ -48,6 +49,11 @@ const router = VueRouter.createRouter({
       name: 'SensorsPage',
       component: IotSensors
     },
+    {
+      path: '/edit-sensor/:id',
+      name: 'EditSensor',
+      component: EditSensor
+    },    
     {
       path: '/userprofile',
       name: 'UserProfile',

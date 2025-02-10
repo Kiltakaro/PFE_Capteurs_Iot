@@ -47,10 +47,8 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 #     from mqtt_client import start_mqtt
 #     start_mqtt()
 
-
-# Création d'un utilisateur administrateur au lancement de l'appli, si aucun n'existe déjà
+# Ajoute un utilisateur admin si aucun n'existe
 def create_admin():
-    """Ajoute un utilisateur admin si aucun n'existe."""
     with app.app_context():
         admin = User.query.filter_by(username="admin").first()
         if not admin:
@@ -60,12 +58,11 @@ def create_admin():
             db.session.commit()
             print("Admin créé avec succès")
         else:
-            print("Admin existe déjà, aucune action requise")
-
+            print("Un admin existe déjà")
 
 db.init_app(app)
 
-# Création des tables et ajout de l'admin au lancement de l'application
+# Création des tables
 with app.app_context():
     db.create_all()
     create_admin()
@@ -300,4 +297,3 @@ if __name__ == '__main__':
     # Lancer MQTT en parallèle de Flask
     # Thread(target=start_mqtt, daemon=True).start()
     app.run(host='0.0.0.0', port=5000, debug=True)
-

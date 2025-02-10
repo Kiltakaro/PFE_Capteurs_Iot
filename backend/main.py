@@ -3,18 +3,10 @@ from flask_cors import CORS
 from flask_sqlalchemy import SQLAlchemy
 from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity
 from werkzeug.security import check_password_hash, generate_password_hash
-
-
 from threading import Thread
-
-import os
-import uuid
-
+import os, uuid, time
 # from mqtt_client import start_mqtt
-
 from models import db, User, SensorData
-
-import time
 
 time.sleep(5)
 
@@ -56,11 +48,27 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 #     start_mqtt()
 
 
+# Création d'un utilisateur administrateur au lancement de l'appli, si aucun n'existe déjà
+def create_admin():
+    """Ajoute un utilisateur admin si aucun n'existe."""
+    with app.app_context():
+        admin = User.query.filter_by(username="admin").first()
+        if not admin:
+            hashed_password = generate_password_hash("1122")
+            new_admin = User(username="admin", password=hashed_password, is_admin=True)
+            db.session.add(new_admin)
+            db.session.commit()
+            print("Admin créé avec succès")
+        else:
+            print("Admin existe déjà, aucune action requise")
+
+
 db.init_app(app)
 
-# Création des tables
+# Création des tables et ajout de l'admin au lancement de l'application
 with app.app_context():
     db.create_all()
+    create_admin()
 
 # Clé secrète pour générer les tokens JWT
 app.config["JWT_SECRET_KEY"] = "super-secret-key"  # À changer avec une vraie clé secrète en production

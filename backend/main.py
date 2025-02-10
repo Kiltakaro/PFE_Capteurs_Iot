@@ -290,7 +290,76 @@ def update_sensor(uid):
 
 
 ########################## A FINIR ################
+######################### MQTT ####################
 # Création de la base de données (au démarrage uniquement pour dev)
+
+import paho.mqtt.client as mqtt
+import json
+import random
+from apscheduler.schedulers.background import BackgroundScheduler
+
+########## MQTT 
+# Connexion + Publish + Subscribe
+
+# Configuration du broker MQTT
+MQTT_BROKER = "mosquitto"  # Nom du container docker
+MQTT_PORT = 1883
+MQTT_TOPIC = "sensor/data"
+
+def on_connect(client, userdata, flags, rc):
+    print(f"PARFAIT Connecté au broker MQTT avec le code {rc}")
+    client.subscribe(MQTT_TOPIC)
+
+def on_message(client, userdata, msg):
+    payload = msg.payload.decode()
+    print(f"YOUPIIIIIII Message reçu sur {msg.topic}: {payload}")
+
+# Création du client MQTT
+mqtt_client = mqtt.Client()
+mqtt_client.on_connect = on_connect
+mqtt_client.on_message = on_message
+
+# Connexion au broker
+mqtt_client.connect(MQTT_BROKER, MQTT_PORT, 60)
+mqtt_client.loop_start()
+
+
+@app.route('/api/mqtt/publish', methods=['POST'])
+def publish_mqtt():
+    data = request.json
+    topic = data.get("topic", MQTT_TOPIC)  # Utilise le topic par défaut si absent
+    message = data.get("message", "Valeur par défaut")
+
+    mqtt_client.publish(topic, message)
+    return jsonify({"message": f"Message '{message}' envoyé sur {topic}"}), 200
+
+
+
+########## Scheduler
+
+# GENERATEUR DE VALEUR DE TEST 
+# LA CA FAIT SUR TOUS LES CAPTEURS DONC FAUDRA CHANGER
+def generate_sensor_data():
+    with app.app_context():
+        sensors = SensorData.query.all()
+        for sensor in sensors:
+            value = random.uniform(10, 50)  # Valeur aléatoire entre 10 et 50
+            payload = {
+                "sensor_id": str(sensor.uid),
+                "name": sensor.name,
+                "value": value,
+                "unit": sensor.unit
+            }
+            mqtt_client.publish(MQTT_TOPIC, json.dumps(payload))
+            print(f"Envoyé : {payload}")
+
+
+scheduler = BackgroundScheduler()
+
+# Envoi toutes les 20 secondes par défaut
+scheduler.add_job(generate_sensor_data, 'interval', seconds=20)
+scheduler.start()
+
 
 
 if __name__ == '__main__':

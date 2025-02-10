@@ -6,3 +6,4 @@ Werkzeug
 SQLAlchemy
 flask-jwt-extended
 paho-mqtt
+apscheduler

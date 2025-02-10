@@ -27,22 +27,22 @@ services:
     networks:
       - app-network
 
-  # mosquitto:
-  #   container_name: mosquitto
-  #   image: eclipse-mosquitto:latest
-  #   restart: always
-  #   ports:
-  #     - "1883:1883"  # Port MQTT standard
-  #     - "9001:9001"  # WebSockets pour Vue.js
-  #   volumes:
-  #     - ./mosquitto/config/mosquitto.conf:/mosquitto/config/mosquitto.conf
-  #     - ./mosquitto/config/pwfile:/mosquitto/config/pwfile # JE sais pas a quoi ça sert
-  #     - ./mosquitto/data:/mosquitto/data
-  #     - ./mosquitto/log:/mosquitto/log
-  #   # security_opt:
-  #   #   - no-new-privileges:true
-  #   networks:
-  #     - app-network
+  mosquitto:
+    container_name: mosquitto
+    image: eclipse-mosquitto:latest
+    restart: always
+    ports:
+      - "1883:1883"  # Port MQTT standard
+      - "9001:9001"  # WebSockets pour Vue.js
+    volumes:
+      - ./mosquitto/config/mosquitto.conf:/mosquitto/config/mosquitto.conf
+      - ./mosquitto/config/pwfile:/mosquitto/config/pwfile # JE sais pas a quoi ça sert
+      - ./mosquitto/data:/mosquitto/data
+      - ./mosquitto/log:/mosquitto/log
+    # security_opt:
+    #   - no-new-privileges:true
+    networks:
+      - app-network
     
   database:
     build:

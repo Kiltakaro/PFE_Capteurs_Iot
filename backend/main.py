@@ -5,7 +5,21 @@ from flask_jwt_extended import JWTManager, create_access_token, jwt_required, ge
 from werkzeug.security import check_password_hash, generate_password_hash
 from threading import Thread
 import os, uuid, time
-# from mqtt_client import start_mqtt
+
+
+import paho.mqtt.client as mqtt
+import json
+import random
+from apscheduler.schedulers.background import BackgroundScheduler
+import logging
+import pandas as pd
+
+
+logging.basicConfig()
+logging.getLogger('apscheduler').setLevel(logging.DEBUG)
+
+
+
 from models import db, User, SensorData
 
 time.sleep(5)
@@ -41,11 +55,6 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 
 ################### POUR MQTT #####################
-
-# Désactiver la connexion MQTT si nécessaire
-# if os.environ.get('DISABLE_MQTT') != '1':
-#     from mqtt_client import start_mqtt
-#     start_mqtt()
 
 # Ajoute un utilisateur admin si aucun n'existe
 def create_admin():
@@ -260,17 +269,16 @@ def get_sensor(uid):
     return jsonify(sensor.to_dict()), 200
 
 
-
-
 # Route pour mettre à jour un capteur
-# NON UTILISABLE
-# Ne fonctionne pas caro n modifie pas comme ça dans le front
 # on ne modifie peut etre pas la valeur etc, je sais pas comment on simule les capteurs
 @app.route('/api/sensors/<uuid:uid>', methods=['PUT'])
 def update_sensor(uid):
     sensor = SensorData.query.filter_by(uid=uid).first()
     if not sensor:
         return jsonify({"error": "Capteur inconnu"}), 404
+
+    # Pour la simulation
+    # old_sensor = sensor.period
 
     data = request.json
     sensor.name = data.get('name', sensor.name)
@@ -283,20 +291,26 @@ def update_sensor(uid):
     sensor.min_period = data.get('min_period', sensor.min_period)
     sensor.max_period = data.get('max_period', sensor.max_period)
     sensor.read_only = data.get('read_only', sensor.read_only)
+    # JEN DOUTE FORT
     sensor.value = data.get('value', sensor.value)
 
     db.session.commit()
+
+    # if old_period != sensor.period:
+    #     manage_sensor_job(sensor, "update")
+
+    # print(f"Capteur {sensor.name} mis à jour (période : {sensor.period}s)")
+
+    # if old_period != sensor.period:
+    #     manage_sensor_job(sensor, "update") 
+    # manage_sensor_job(sensor, "update")
+
     return jsonify({"message": "Capteur mis à jour avec succès", "sensor": sensor.to_dict()}), 200
 
 
 ########################## A FINIR ################
 ######################### MQTT ####################
 # Création de la base de données (au démarrage uniquement pour dev)
-
-import paho.mqtt.client as mqtt
-import json
-import random
-from apscheduler.schedulers.background import BackgroundScheduler
 
 ########## MQTT 
 # Connexion + Publish + Subscribe
@@ -334,35 +348,102 @@ def publish_mqtt():
     return jsonify({"message": f"Message '{message}' envoyé sur {topic}"}), 200
 
 
+####### Config Broker MQTT
+
+@app.route('/api/mqtt/config', methods=['POST'])
+def update_mqtt_config():
+    global MQTT_BROKER, MQTT_PORT, MQTT_TOPIC, mqtt_client
+
+    data = request.json
+    MQTT_BROKER = data.get("broker", MQTT_BROKER)
+    MQTT_PORT = int(data.get("port", MQTT_PORT))
+    MQTT_TOPIC = data.get("topic", MQTT_TOPIC)
+
+    # Déconnexion et reconnexion avec les nouveaux paramètres
+    mqtt_client.loop_stop()
+    mqtt_client = mqtt.Client()
+    mqtt_client.on_connect = on_connect
+    mqtt_client.on_message = on_message
+    mqtt_client.connect(MQTT_BROKER, MQTT_PORT, 60)
+    mqtt_client.loop_start()
+
+    return jsonify({"message": "Configuration MQTT mise à jour"}), 200
+
+################## SIMULATION CAPTEURS #######################
+
+
+# A modifier pour mettre un SensorData en parametre
+def generate_sensor_data(sensor_uid, sensor_name, sensor_unit, sensor_min_value=10, sensor_max_value=50):
+    """
+    Simule la génération de données pour un capteur spécifique
+    """
+    with app.app_context():
+        # on mettra surement un delta la dedans 
+        value = random.uniform(sensor_min_value, sensor_max_value)  # Valeur aléatoire entre min et max
+        payload = {
+            "sensor_id": sensor_uid, # deja en string
+            "name": sensor_name,
+            "value": value,
+            "unit": sensor_unit
+        }
+        print(f"Envoi MQTT vers Topic: {sensor_uid}/datastore, Message: {json.dumps(payload)}")  # Debug
+        mqtt_client.publish(f"{sensor_uid}/datastore", json.dumps(payload))  # Publie sur le topic du capteur
+        print(f"Envoi MQTT Confirmed")  # Debug
+
 
 ########## Scheduler
 
-# GENERATEUR DE VALEUR DE TEST 
-# LA CA FAIT SUR TOUS LES CAPTEURS DONC FAUDRA CHANGER
-def generate_sensor_data():
+scheduler = BackgroundScheduler()
+
+# Programme les capteurs avec leurs fréquences respectives
+
+def schedule_existing_sensors():
+    """
+    Met en place un job de simulation sur chaque capteur déjà dans la bdd
+    """
+
+    scheduler.remove_all_jobs()
     with app.app_context():
         sensors = SensorData.query.all()
         for sensor in sensors:
-            value = random.uniform(10, 50)  # Valeur aléatoire entre 10 et 50
-            payload = {
-                "sensor_id": str(sensor.uid),
-                "name": sensor.name,
-                "value": value,
-                "unit": sensor.unit
-            }
-            mqtt_client.publish(MQTT_TOPIC, json.dumps(payload))
-            print(f"Envoyé : {payload}")
+            print(f"Programmation du capteur {sensor.name} avec une période de {sensor.period} secondes")
+            scheduler.add_job(generate_sensor_data, 'interval', seconds=sensor.period, id=str(sensor.uid), args=[str(sensor.uid), sensor.name, sensor.unit])
+    print(f"Jobs actifs : {scheduler.get_jobs()}")
 
 
-scheduler = BackgroundScheduler()
+def manage_sensor_job(sensor: SensorData, action: str):
+    """
+    Gère l'ajout, la mise à jour ou la suppression d'un job MQTT pour un capteur.
+    
+    action : "add" -> ajoute un job
+             "update" -> met à jour un job (si la période change)
+             "delete" -> supprime un job
+    """
 
-# Envoi toutes les 20 secondes par défaut
-scheduler.add_job(generate_sensor_data, 'interval', seconds=20)
-scheduler.start()
+    sensor_str_uid = str(sensor.uid) # est aussi l'id du job
+
+    if action == "add":
+        scheduler.add_job(generate_sensor_data, 'interval', seconds=sensor.period, id=sensor_str_uid, args=[sensor_str_uid, sensor.name, sensor.unit])
+        print(f"Job ajouté pour {sensor.name} (période : {sensor.period}s)")
+
+    elif action == "update":
+        if scheduler.get_job(sensor_str_uid):
+            scheduler.remove_job(sensor_str_uid)  # Supprime l'ancien job
+        scheduler.add_job(generate_sensor_data, 'interval', seconds=sensor.period, id=sensor_str_uid, args=[sensor_str_uid, sensor.name, sensor.unit])
+        print(f"Job mis à jour pour {sensor.name} (nouvelle période : {sensor.period}s)")
+
+    elif action == "delete":
+        if scheduler.get_job(sensor_str_uid):
+            scheduler.remove_job(sensor_str_uid)
+            print(f"Job supprimé pour {sensor.name}")
+
+
+
+# DECOMMENTER POUR TESTER LENVOI DANS LE MQTT
+# schedule_existing_sensors()
+# scheduler.start()
 
 
 
 if __name__ == '__main__':
-    # Lancer MQTT en parallèle de Flask
-    # Thread(target=start_mqtt, daemon=True).start()
     app.run(host='0.0.0.0', port=5000, debug=True)

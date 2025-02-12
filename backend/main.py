@@ -53,15 +53,12 @@ app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://user:password@database:543
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 
-# Ajoute un utilisateur admin si aucun n'existe
-def create_admin():
-    """
-    Génere un user Admin automatiquement dans la database
-    """
+# Ajoute un admin si aucun n'existe
+def create_default_admin():
     with app.app_context():
         admin = User.query.filter_by(username="admin").first()
         if not admin:
-            hashed_password = generate_password_hash("1122")
+            hashed_password = generate_password_hash("1133")
             new_admin = User(username="admin", password=hashed_password, is_admin=True)
             db.session.add(new_admin)
             db.session.commit()
@@ -69,12 +66,26 @@ def create_admin():
         else:
             print("Un admin existe déjà")
 
+# Ajoute un user normal si aucun n'existe
+def create_default_user():
+    with app.app_context():
+        admin = User.query.filter_by(username="user").first()
+        if not admin:
+            hashed_password = generate_password_hash("123")
+            new_user = User(username="user", password=hashed_password, is_admin=False)
+            db.session.add(new_user)
+            db.session.commit()
+            print("User créé avec succès")
+        else:
+            print("Un user existe déjà")
+
 db.init_app(app)
 
 # Création des tables
 with app.app_context():
     db.create_all()
-    create_admin()
+    create_default_admin()
+    create_default_user()
 
 # Clé secrète pour générer les tokens JWT
 app.config["JWT_SECRET_KEY"] = "super-secret-key"  # À changer avec une vraie clé secrète en production

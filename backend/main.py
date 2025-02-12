@@ -46,18 +46,18 @@ CORS(app, resources={r"/api/*": {"origins": "*"}}, supports_credentials=True)
 # CORS(app, resources={r"/*": {"origins": origins}}, supports_credentials=True)
 
 
-############## TEST BASE DE DONNES SQLLITE ###############
+######################### BASE DE DONNES  ########################
 
 # Configuration de la base de données
-# app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///app.db'
 app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://user:password@database:5432/sensorDb'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 
-################### POUR MQTT #####################
-
 # Ajoute un utilisateur admin si aucun n'existe
 def create_admin():
+    """
+    Génere un user Admin automatiquement dans la database
+    """
     with app.app_context():
         admin = User.query.filter_by(username="admin").first()
         if not admin:
@@ -93,6 +93,9 @@ def hello_world():
 #####################  CRUD  USER  #####################
 @app.route('/api/users/create', methods=['POST'])
 def create_user():
+    """
+    Route pour créer un User dans la database
+    """
     data = request.json
     username = data.get('username')
     password = data.get('password')
@@ -117,6 +120,9 @@ def create_user():
 # ROute a proteger je pense
 @app.route('/api/users', methods=['GET'])
 def read_users():
+    """
+    Route pour récupérer tous users
+    """
     users = User.query.all()
     return jsonify([{
         "id": user.id,
@@ -127,10 +133,12 @@ def read_users():
 
 # CELLE DU DESSUS CEST POUR TOUS LES USERS
 # CELLE DU DESSOUS C'EST POUR SEULEMENT CELUI QUI EST CONNECTE
-# Route pour récupérer les informations de l'utilisateur connecté
 @app.route('/api/user', methods=['GET'])
 @jwt_required()
 def read_user():
+    """
+    Route pour récupérer l'utilisateur actuel 
+    """
     current_user = get_jwt_identity()
     user = User.query.filter_by(username=current_user).first()
     if not user:
@@ -146,6 +154,13 @@ def read_user():
 @app.route('/api/user', methods=['PUT'])
 @jwt_required()
 def update_user():
+    """
+    Route pour que l'utilisateur modifie ses données
+
+    Arguments attendus
+    username : nouveau nom de l'utilisateur
+    password : nouveau mot de passe de l'utilisateur
+    """
     current_user = get_jwt_identity()
     user = User.query.filter_by(username=current_user).first()
     if not user:
@@ -169,6 +184,11 @@ def update_user():
 # Ajouter sécurité
 @app.route('/api/users/<int:user_id>', methods=['DELETE'])
 def delete_user(user_id):
+    """
+    Route pour supprimer un utilisateur
+    
+    user_id : utilisateur à supprimer 
+    """
     
     user = db.session.get(User, user_id)
     if not user:
@@ -183,7 +203,13 @@ def delete_user(user_id):
 
 @app.route('/api/login', methods=['POST'])
 def login():
+    """
+    Route pour authentifier un utilisateur
 
+    Arguments attendus
+    username : nom de l'utilisateur
+    password : mdp de l'utilisateur
+    """
     username = request.json.get('username', None)
     password = request.json.get('password', None)
 
@@ -203,18 +229,34 @@ def login():
 ############################## SENSORS ###############################
 
 
-# Endpoint pour obtenir tous les capteurs
 @app.route('/api/sensors', methods=['GET'])
 def get_sensors():
+    """
+    Route pour récupérer les capteurs
+    """
     sensors = SensorData.query.all()
     return jsonify([sensor.to_dict() for sensor in sensors])
 
 
 
-# Endpoint pour ajouter un capteur
 # REFAIRE LES SSENSORS APRES
 @app.route('/api/sensors', methods=['POST'])
 def add_sensor():
+    """
+    Route pour ajouter un capteur
+
+    Arguments attendus
+    name : nom du capteur
+    unit : unité RFC8789
+    description : Description du capteur
+    min_value : Valeur minimale pour la simulation
+    max_value : Valeur maximale pour la simulation
+    period : Fréquence d'envoi de données lors de la simulation
+    ??min_period 
+    ??max_period
+    ??read_only
+    ??value
+    """
     data = request.json
     name = data.get('name')
     unit = data.get('unit')
@@ -247,21 +289,39 @@ def add_sensor():
     return jsonify({"message": "Capteur ajouté avec succès", "sensor": new_sensor.to_dict()}), 201
 
 
-# Route pour supprimer un capteur
 @app.route('/api/sensors/<uuid:uid>', methods=['DELETE'])
 def delete_sensor(uid):
+    """
+    Route pour supprimer un capteur
+
+    uid : uid de l'utilisateur
+    """
     sensor = SensorData.query.filter_by(uid=uid).first()
     if not sensor:
         return jsonify({"error": "Capteur inconnu"}), 404
 
+
+    # Si le capteur est en pleine simulation, il faut l'arretée
+    job = scheduler.get_job(sensor_str_uid)
+    if job :
+        if old_period != sensor.period :
+            manage_sensor_job(sensor, "delete")
+            print(f"Job supprimé")
+
+
     db.session.delete(sensor)
     db.session.commit()
+
     return jsonify({"message": "Capteur supprimé"}), 200
 
 
-# Route pour récupérer un capteur spécifique
 @app.route('/api/sensors/<uuid:uid>', methods=['GET'])
 def get_sensor(uid):
+    """
+    Route pour récupérer le capteur spécifique
+
+    uid : uid du capteur
+    """
     sensor = SensorData.query.filter_by(uid=uid).first()
     if not sensor:
         return jsonify({"error": "Capteur inconnu"}), 404
@@ -269,10 +329,15 @@ def get_sensor(uid):
     return jsonify(sensor.to_dict()), 200
 
 
-# Route pour mettre à jour un capteur
 # on ne modifie peut etre pas la valeur etc, je sais pas comment on simule les capteurs
 @app.route('/api/sensors/<uuid:uid>', methods=['PUT'])
 def update_sensor(uid):
+    """
+    Route pour modifier un capteur
+
+    uid : uid du capteur à modifier
+    """
+
     sensor = SensorData.query.filter_by(uid=uid).first()
     if not sensor:
         return jsonify({"error": "Capteur inconnu"}), 404
@@ -296,14 +361,17 @@ def update_sensor(uid):
 
     db.session.commit()
 
-    # if old_period != sensor.period:
-    #     manage_sensor_job(sensor, "update")
+    # Si le capteur est en pleine simulation, il faut l'update si sa fréquence d'envoi change
+    job = scheduler.get_job(sensor_str_uid)
+    if job :
+        if old_period != sensor.period :
+            manage_sensor_job(sensor, "update")
+            print(f"Job mis à jour")
 
-    # print(f"Capteur {sensor.name} mis à jour (période : {sensor.period}s)")
 
-    # if old_period != sensor.period:
-    #     manage_sensor_job(sensor, "update") 
-    # manage_sensor_job(sensor, "update")
+    print(f"Capteur {sensor.name} mis à jour (période : {sensor.period}s)")
+
+
 
     return jsonify({"message": "Capteur mis à jour avec succès", "sensor": sensor.to_dict()}), 200
 
@@ -327,6 +395,7 @@ def on_connect(client, userdata, flags, rc):
 def on_message(client, userdata, msg):
     payload = msg.payload.decode()
     print(f"YOUPIIIIIII Message reçu sur {msg.topic}: {payload}")
+
 
 # Création du client MQTT
 mqtt_client = mqtt.Client()
@@ -373,21 +442,25 @@ def update_mqtt_config():
 
 
 # A modifier pour mettre un SensorData en parametre
-def generate_sensor_data(sensor_uid, sensor_name, sensor_unit, sensor_min_value=10, sensor_max_value=50):
+def generate_sensor_data(sensor : SensorData):
     """
     Simule la génération de données pour un capteur spécifique
+
+    sensor : le capteur à simuler 
     """
+
+    sensor_str_uid = str(sensor.uid)
     with app.app_context():
         # on mettra surement un delta la dedans 
-        value = random.uniform(sensor_min_value, sensor_max_value)  # Valeur aléatoire entre min et max
+        value = random.uniform(sensor.min_value, sensor.max_value)  # Valeur aléatoire entre min et max
         payload = {
-            "sensor_id": sensor_uid, # deja en string
-            "name": sensor_name,
+            "sensor_id": sensor_str_uid, # l'uid ne se converti pas automatiquement en string
+            "name": sensor.name,
             "value": value,
-            "unit": sensor_unit
+            "unit": sensor.unit
         }
-        print(f"Envoi MQTT vers Topic: {sensor_uid}/datastore, Message: {json.dumps(payload)}")  # Debug
-        mqtt_client.publish(f"{sensor_uid}/datastore", json.dumps(payload))  # Publie sur le topic du capteur
+        print(f"Envoi MQTT vers Topic: {sensor_str_uid}/datastore, Message: {json.dumps(payload)}")  # Debug
+        mqtt_client.publish(f"{sensor_str_uid}/datastore", json.dumps(payload))  # Publie sur le topic du capteur
         print(f"Envoi MQTT Confirmed")  # Debug
 
 
@@ -407,7 +480,7 @@ def schedule_existing_sensors():
         sensors = SensorData.query.all()
         for sensor in sensors:
             print(f"Programmation du capteur {sensor.name} avec une période de {sensor.period} secondes")
-            scheduler.add_job(generate_sensor_data, 'interval', seconds=sensor.period, id=str(sensor.uid), args=[str(sensor.uid), sensor.name, sensor.unit])
+            scheduler.add_job(generate_sensor_data, 'interval', seconds=sensor.period, id=str(sensor.uid), args=[sensor])
     print(f"Jobs actifs : {scheduler.get_jobs()}")
 
 
@@ -423,13 +496,13 @@ def manage_sensor_job(sensor: SensorData, action: str):
     sensor_str_uid = str(sensor.uid) # est aussi l'id du job
 
     if action == "add":
-        scheduler.add_job(generate_sensor_data, 'interval', seconds=sensor.period, id=sensor_str_uid, args=[sensor_str_uid, sensor.name, sensor.unit])
+        scheduler.add_job(generate_sensor_data, 'interval', seconds=sensor.period, id=sensor_str_uid, args=[sensor])
         print(f"Job ajouté pour {sensor.name} (période : {sensor.period}s)")
 
     elif action == "update":
         if scheduler.get_job(sensor_str_uid):
             scheduler.remove_job(sensor_str_uid)  # Supprime l'ancien job
-        scheduler.add_job(generate_sensor_data, 'interval', seconds=sensor.period, id=sensor_str_uid, args=[sensor_str_uid, sensor.name, sensor.unit])
+        scheduler.add_job(generate_sensor_data, 'interval', seconds=sensor.period, id=sensor_str_uid, args=[sensor])
         print(f"Job mis à jour pour {sensor.name} (nouvelle période : {sensor.period}s)")
 
     elif action == "delete":
@@ -440,8 +513,8 @@ def manage_sensor_job(sensor: SensorData, action: str):
 
 
 # DECOMMENTER POUR TESTER LENVOI DANS LE MQTT
-# schedule_existing_sensors()
-# scheduler.start()
+schedule_existing_sensors()
+scheduler.start()
 
 
 

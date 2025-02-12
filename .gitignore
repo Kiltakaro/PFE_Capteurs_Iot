@@ -14,6 +14,7 @@ backend/.venv/
 backend/__pycache__/
 backend/instance/
 backend/instance/app.db
+backend/test_main.py
 
 
 # local env files

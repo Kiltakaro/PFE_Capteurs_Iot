@@ -73,17 +73,18 @@ const router = VueRouter.createRouter({
 })
 //  path: '/:pathMatch(.*)*'
 
-
+// Vérifie l'authentification à chaque demande d'accès de route
 router.beforeEach(async (to, from, next) => {
   console.log(`Navigating to: ${to.path}`);
 
-  const publicPages = ['/', '/login']; 
-  const authRequired = !publicPages.includes(to.path);
-  const adminOnlyPages = ['/admindashboard'];
+  const publicPages = ['/', '/login']; // Pages publiques
+  const authRequired = !publicPages.includes(to.path); // Tout le reste est privé
+  const adminOnlyPages = ['/admindashboard']; // Pages nécessitant un statut admin
   
   const token = localStorage.getItem('token');
   let user = null;
 
+  // Vérifie qu'un token existe et est valide. Si non valide, destruction du token
   if (token) {
     try {
       const response = await fetch(`http://localhost:5000/api/user`, {
@@ -101,16 +102,19 @@ router.beforeEach(async (to, from, next) => {
     }
   }
 
+  // Redirection si page privée et accès refusé
   if (authRequired && !user) {
     console.log("Redirecting to login...");
     return next('/login');
   }
 
+  // Redirection si page admin et accès refusé
   if (adminOnlyPages.includes(to.path) && (!user || !user.is_admin)) {
-    console.log("Redirecting to home...");
-    return next('/');
+    console.log("Redirecting to login...");
+    return next('/login');
   }
 
+  // Si aucun problème, accès à la page
   next();
 });
 
@@ -118,5 +122,5 @@ router.beforeEach(async (to, from, next) => {
 
 // Création de l'application Vue et utilisation du routeur
 createApp(App)
-  .use(router) // Ajout du routeur à l'application
+  .use(router)
   .mount('#app'); // Montage de l'application Vue sur l'élément #app

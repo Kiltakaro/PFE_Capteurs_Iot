@@ -37,12 +37,13 @@ export default {
 
         const checkLoginStatus = async () => {
             const token = localStorage.getItem("token");
+            // Vérifie qu'un token existe
             if (!token) {
                 isLoggedIn.value = false;
                 isAdmin.value = false;
                 return;
             }
-
+            // Vérifie que le token est valide et récupère le statut user/admin
             try {
                 const response = await axios.get(`http://${ip}:5000/api/user`, {
                     headers: { Authorization: `Bearer ${token}` },
@@ -60,6 +61,7 @@ export default {
             }
         };
 
+        // Reset le statut d'authentification et redirige vers l'accueil
         const logout = () => {
             localStorage.removeItem("token");
             isLoggedIn.value = false;

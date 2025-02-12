@@ -48,3 +48,20 @@ class SensorData(db.Model):
             'value': self.value,
             'timestamp': self.timestamp
         }
+
+
+class SensorHistory(db.Model):
+    __tablename__ = 'sensor_history'
+    id = db.Column(db.Integer, primary_key=True)
+    sensor_uid = db.Column(db.String(100), db.ForeignKey('sensor_data.uid'), nullable=False)
+    value = db.Column(db.Float, nullable=False)
+    timestamp = db.Column(db.DateTime, nullable=False, default=db.func.current_timestamp())
+    sensor = db.relationship('SensorData', backref=db.backref('history', lazy=True))
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'sensor_uid': str(self.sensor_uid),
+            'value': self.value,
+            'timestamp': self.timestamp
+        }

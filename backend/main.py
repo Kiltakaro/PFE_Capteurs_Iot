@@ -13,14 +13,15 @@ import random
 from apscheduler.schedulers.background import BackgroundScheduler
 import logging
 import pandas as pd
+import sys
 
 
-logging.basicConfig()
+logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
 logging.getLogger('apscheduler').setLevel(logging.DEBUG)
 
 
 
-from models import db, User, SensorData
+from models import db, User, SensorData, SensorHistory
 
 time.sleep(5)
 
@@ -386,16 +387,45 @@ def update_sensor(uid):
 # Configuration du broker MQTT
 MQTT_BROKER = "mosquitto"  # Nom du container docker
 MQTT_PORT = 1883
-MQTT_TOPIC = "sensor/data"
+MQTT_TOPIC = "#" # Tous les topics
 
 def on_connect(client, userdata, flags, rc):
     print(f"PARFAIT Connecté au broker MQTT avec le code {rc}")
     client.subscribe(MQTT_TOPIC)
 
+
+# pour verifier 
+# curl http://localhost:5000/api/sensor_history
 def on_message(client, userdata, msg):
     payload = msg.payload.decode()
     print(f"YOUPIIIIIII Message reçu sur {msg.topic}: {payload}")
 
+    try:
+        data = json.loads(payload)
+        print(payload)
+        print(data)
+
+        sensor_uid = data["sensor_uid"]
+        value = data["value"]
+
+        with app.app_context():
+            sensor = SensorData.query.get(sensor_uid)
+            if sensor:
+                history_entry = SensorHistory(sensor_uid=sensor_uid, value=value)
+                db.session.add(history_entry)
+                db.session.commit()
+                print(f"Ajout en historique du capteur {sensor_uid}: {value} {sensor.unit}")
+            else:
+                print(f"Aucun capteur trouvé avec l'UID {sensor_uid}")
+
+    except Exception as e:
+        print(f"Erreur lors du traitement du message MQTT: {e}")
+
+
+@app.route('/api/sensor_history', methods=['GET'])
+def get_sensor_history():
+    history = SensorHistory.query.all()
+    return jsonify([entry.to_dict() for entry in history])
 
 # Création du client MQTT
 mqtt_client = mqtt.Client()
@@ -454,7 +484,7 @@ def generate_sensor_data(sensor : SensorData):
         # on mettra surement un delta la dedans 
         value = random.uniform(sensor.min_value, sensor.max_value)  # Valeur aléatoire entre min et max
         payload = {
-            "sensor_id": sensor_str_uid, # l'uid ne se converti pas automatiquement en string
+            "sensor_uid": sensor_str_uid, # l'uid ne se converti pas automatiquement en string
             "name": sensor.name,
             "value": value,
             "unit": sensor.unit

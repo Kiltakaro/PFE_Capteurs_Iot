@@ -16,6 +16,8 @@ import MqttTest from './components/MqttTest.vue'
 
 import './assets/tailwind.css'; // Pas toucher, SANS ça pas de tailwindcss
 import EditSensor from './components/EditSensor.vue'
+import SensorResult from './components/SensorResult.vue'
+import CanvasJSChart from '@canvasjs/vue-charts';
 
 
 // Configuration du routeur directement dans main.js
@@ -63,6 +65,11 @@ const router = VueRouter.createRouter({
       path: '/mqtttest',
       name: 'MqttTest',
       component: MqttTest
+    },
+    {
+      path: '/result-sensors/:id',
+      name: 'SensorResult',
+      component: SensorResult
     },
     {
       path: '/*', // Capture toutes les routes non définies
@@ -119,8 +126,12 @@ router.beforeEach(async (to, from, next) => {
 });
 
 
-
 // Création de l'application Vue et utilisation du routeur
-createApp(App)
-  .use(router)
-  .mount('#app'); // Montage de l'application Vue sur l'élément #app
+const app = createApp(App);
+app.use(router);
+app.use(CanvasJSChart); // install the CanvasJS Vuejs Chart Plugin
+app.mount('#app');
+
+// createApp(App)
+//   .use(router)
+//   .mount('#app'); // Montage de l'application Vue sur l'élément #app

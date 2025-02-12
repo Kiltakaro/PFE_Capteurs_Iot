@@ -406,7 +406,7 @@ def on_connect(client, userdata, flags, rc):
 
 
 # pour verifier 
-# curl http://localhost:5000/api/sensor_history
+# curl http://localhost:5000/api/sensors/history
 def on_message(client, userdata, msg):
     payload = msg.payload.decode()
     print(f"YOUPIIIIIII Message reçu sur {msg.topic}: {payload}")
@@ -433,10 +433,37 @@ def on_message(client, userdata, msg):
         print(f"Erreur lors du traitement du message MQTT: {e}")
 
 
-@app.route('/api/sensor_history', methods=['GET'])
-def get_sensor_history():
+@app.route('/api/sensors/history', methods=['GET'])
+def get_all_sensor_history():
+    """
+    Route pour récupérer les données simulées des capteurs
+    """
     history = SensorHistory.query.all()
     return jsonify([entry.to_dict() for entry in history])
+
+
+@app.route('/api/sensors/history/<uuid:sensor_uid>', methods=['GET'])
+def get_sensor_history(sensor_uid):
+    """
+    Route pour récupérer les données simulées d'un capteur spécifique
+    """
+    try:
+        history = SensorHistory.query.filter_by(sensor_uid=sensor_uid).order_by(SensorHistory.timestamp.desc()).all()
+        if not history:
+            return jsonify({"message": "Aucune donnée historique trouvée pour ce capteur"}), 404
+
+        history_data = [
+            {
+                "value": entry.value,
+                "timestamp": entry.timestamp.isoformat()
+            } for entry in history
+        ]
+
+        return jsonify({"sensor_uid": str(sensor_uid), "history": history_data}), 200
+
+    except Exception as e:
+        return jsonify({"error": f"Erreur lors de la récupération de l'historique: {e}"}), 500
+
 
 # Création du client MQTT
 mqtt_client = mqtt.Client()
@@ -554,8 +581,8 @@ def manage_sensor_job(sensor: SensorData, action: str):
 
 
 # DECOMMENTER POUR TESTER LENVOI DANS LE MQTT
-schedule_existing_sensors()
-scheduler.start()
+# schedule_existing_sensors()
+# scheduler.start()
 
 
 

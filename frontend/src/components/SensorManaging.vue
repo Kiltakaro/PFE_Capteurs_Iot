@@ -21,6 +21,9 @@
             <button class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-700 transition">Modifier</button>
           </router-link>
           <button @click="confirmDelete(sensor.uid)" class="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-700 transition ml-2">Supprimer</button>
+          <router-link :to="{ name: 'SensorResult', params: { id: sensor.uid } }">
+            <button class="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-700 transition ml-2">Voir Simulation</button>
+          </router-link>
         </div>
       </div>
     </div>

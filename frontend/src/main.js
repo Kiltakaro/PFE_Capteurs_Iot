@@ -74,6 +74,46 @@ const router = VueRouter.createRouter({
 //  path: '/:pathMatch(.*)*'
 
 
+router.beforeEach(async (to, from, next) => {
+  console.log(`Navigating to: ${to.path}`);
+
+  const publicPages = ['/', '/login']; 
+  const authRequired = !publicPages.includes(to.path);
+  const adminOnlyPages = ['/admindashboard'];
+  
+  const token = localStorage.getItem('token');
+  let user = null;
+
+  if (token) {
+    try {
+      const response = await fetch(`http://localhost:5000/api/user`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (response.ok) {
+        user = await response.json();
+      } else {
+        localStorage.removeItem('token');
+      }
+    } catch (error) {
+      console.error("Error fetching user:", error);
+      localStorage.removeItem('token');
+    }
+  }
+
+  if (authRequired && !user) {
+    console.log("Redirecting to login...");
+    return next('/login');
+  }
+
+  if (adminOnlyPages.includes(to.path) && (!user || !user.is_admin)) {
+    console.log("Redirecting to home...");
+    return next('/');
+  }
+
+  next();
+});
+
 
 
 // Création de l'application Vue et utilisation du routeur

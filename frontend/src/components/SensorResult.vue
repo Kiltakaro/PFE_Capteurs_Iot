@@ -6,8 +6,7 @@
     <div class="bg-white shadow-md rounded p-4">
       <CanvasJSChart v-if="options.data.length" :options="options" />
       
-      <p v-else class="text-gray-500">Chargement des données...</p>
-      <p v-else class="text-red-500">Ou peut être données inexistantes ?</p>
+        <p v-else class="text-red-500"> Chargement des données... Ou peut-être données inexistantes ?</p>
     </div>
   </div>
 </template>

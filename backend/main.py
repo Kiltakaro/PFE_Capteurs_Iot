@@ -314,7 +314,7 @@ def delete_sensor(uid):
 
 
     # Si le capteur est en pleine simulation, il faut l'arretée
-    job = scheduler.get_job(sensor_str_uid)
+    job = scheduler.get_job(uid)
     if job :
         if old_period != sensor.period :
             manage_sensor_job(sensor, "delete")
@@ -374,7 +374,7 @@ def update_sensor(uid):
     db.session.commit()
 
     # Si le capteur est en pleine simulation, il faut l'update si sa fréquence d'envoi change
-    job = scheduler.get_job(sensor_str_uid)
+    job = scheduler.get_job(uid)
     if job :
         if old_period != sensor.period :
             manage_sensor_job(sensor, "update")

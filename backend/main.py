@@ -420,7 +420,7 @@ def on_message(client, userdata, msg):
         value = data["value"]
 
         with app.app_context():
-            sensor = SensorData.query.get(sensor_uid)
+            sensor = SensorData.query.filter_by(uid=sensor_uid).first()
             if sensor:
                 history_entry = SensorHistory(sensor_uid=sensor_uid, value=value)
                 db.session.add(history_entry)
@@ -433,6 +433,9 @@ def on_message(client, userdata, msg):
         print(f"Erreur lors du traitement du message MQTT: {e}")
 
 
+######################## DONNEES SIMULEES ####################
+
+# curl http://localhost:5000/api/sensors/history
 @app.route('/api/sensors/history', methods=['GET'])
 def get_all_sensor_history():
     """
@@ -441,11 +444,13 @@ def get_all_sensor_history():
     history = SensorHistory.query.all()
     return jsonify([entry.to_dict() for entry in history])
 
-
+# curl http://localhost:5000/api/sensors/history/ METTRE UN UUID
 @app.route('/api/sensors/history/<uuid:sensor_uid>', methods=['GET'])
 def get_sensor_history(sensor_uid):
     """
     Route pour récupérer les données simulées d'un capteur spécifique
+
+    sensor_uid : uid du capteur
     """
     try:
         history = SensorHistory.query.filter_by(sensor_uid=sensor_uid).order_by(SensorHistory.timestamp.desc()).all()
@@ -464,6 +469,29 @@ def get_sensor_history(sensor_uid):
     except Exception as e:
         return jsonify({"error": f"Erreur lors de la récupération de l'historique: {e}"}), 500
 
+
+@app.route('/api/sensors/history/<uuid:sensor_uid>', methods=['DELETE'])
+def delete_sensor_history(sensor_uid):
+    """
+    Route pour supprimer toutes les données d'un capteur spécifique
+
+    sensor_uid : uid du capteur
+    """
+    try:
+        history = SensorHistory.query.filter_by(sensor_uid=sensor_uid).all()
+        if not history:
+            return jsonify({"message": "Aucune donnée historique trouvée pour ce capteur"}), 404
+
+        for entry in history:
+            db.session.delete(entry)
+        db.session.commit()
+
+        return jsonify({"message": "Toutes les données historiques ont été supprimées pour ce capteur"}), 200
+
+    except Exception as e:
+        return jsonify({"error": f"Erreur lors de la suppression de l'historique: {e}"}), 500
+
+################## MQTT ####################
 
 # Création du client MQTT
 mqtt_client = mqtt.Client()
@@ -516,13 +544,12 @@ def generate_sensor_data(sensor : SensorData):
 
     sensor : le capteur à simuler 
     """
-
     sensor_str_uid = str(sensor.uid)
     with app.app_context():
         # on mettra surement un delta la dedans 
         value = random.uniform(sensor.min_value, sensor.max_value)  # Valeur aléatoire entre min et max
         payload = {
-            "sensor_uid": sensor_str_uid, # l'uid ne se converti pas automatiquement en string
+            "sensor_uid": sensor_str_uid, # l'uid ne se convertit pas automatiquement en string
             "name": sensor.name,
             "value": value,
             "unit": sensor.unit
@@ -552,6 +579,68 @@ def schedule_existing_sensors():
     print(f"Jobs actifs : {scheduler.get_jobs()}")
 
 
+@app.route('/api/sensors/job/<uuid:sensor_uid>/start', methods=['POST'])
+def start_sensor_job(sensor_uid):
+    """
+    Route pour démarrer le job d'un capteur spécifique
+
+    sensor_uid : uid du capteur
+    """
+    try:
+        sensor = SensorData.query.filter_by(uid=sensor_uid).first()
+        if not sensor:
+            return jsonify({"message": "Capteur non trouvé"}), 404
+
+        manage_sensor_job(sensor, "add")
+        return jsonify({"message": f"Job démarré pour le capteur {sensor.name}"}), 200
+
+    except Exception as e:
+        return jsonify({"error": f"Erreur lors du démarrage du job: {e}"}), 500
+
+
+@app.route('/api/sensors/job/<uuid:sensor_uid>/status', methods=['GET'])
+def get_sensor_job_status(sensor_uid):
+    """
+    Route pour vérifier si le job d'un capteur spécifique est lancé ou pas
+
+    sensor_uid : uid du capteur
+    """
+    try:
+        sensor = SensorData.query.filter_by(uid=sensor_uid).first()
+        if not sensor:
+            return jsonify({"message": "Capteur non trouvé"}), 404
+
+        job = scheduler.get_job(str(sensor.uid))
+        if job:
+            return jsonify({"running": True, "message": f"Job actif pour le capteur {sensor.name}"}), 200
+        else:
+            return jsonify({"running": False, "message": f"Aucun job actif pour le capteur {sensor.name}"}), 200
+
+    except Exception as e:
+        return jsonify({"error": f"Erreur lors de la vérification du statut du job: {e}"}), 500
+
+
+@app.route('/api/sensors/job/<uuid:sensor_uid>/stop', methods=['POST'])
+def stop_sensor_job(sensor_uid):
+    """
+    Route pour arrêter le job d'un capteur spécifique
+
+    sensor_uid : uid du capteur
+    """
+    try:
+        sensor = SensorData.query.filter_by(uid=sensor_uid).first()
+        if not sensor:
+            return jsonify({"message": "Capteur non trouvé"}), 404
+
+        manage_sensor_job(sensor, "delete")
+        return jsonify({"message": f"Job arrêté pour le capteur {sensor.name}"}), 200
+
+    except Exception as e:
+        return jsonify({"error": f"Erreur lors de l'arrêt du job: {e}"}), 500
+
+
+
+# A MODIFIER PEUT ETRE PSK JE SUIS PAS SUR DE LA FACTORISATION DE SE COTE
 def manage_sensor_job(sensor: SensorData, action: str):
     """
     Gère l'ajout, la mise à jour ou la suppression d'un job MQTT pour un capteur.
@@ -582,7 +671,7 @@ def manage_sensor_job(sensor: SensorData, action: str):
 
 # DECOMMENTER POUR TESTER LENVOI DANS LE MQTT
 # schedule_existing_sensors()
-# scheduler.start()
+scheduler.start()
 
 
 

@@ -8,6 +8,10 @@
       
         <p v-else class="text-red-500"> Chargement des données... Ou peut-être données inexistantes ?</p>
     </div>
+
+    <button @click="toggleJob" :class="jobRunning ? 'bg-red-500' : 'bg-green-500'" class="text-white px-4 py-2 rounded mt-4">
+      {{ jobRunning ? 'Arrêter le job' : 'Démarrer le job' }}
+    </button>
   </div>
 </template>
 
@@ -32,7 +36,8 @@ export default {
         axisX: { title: "Temps", valueFormatString: "HH:mm:ss" },
         axisY: { title: "Valeur", includeZero: false },
         data: [{ type: "line", dataPoints: [] }]
-      }
+      },
+      jobRunning: false
     };
   },
   
@@ -64,11 +69,34 @@ export default {
       } catch (error) {
         console.error("Erreur lors de la récupération des données :", error);
       }
+    },
+
+    // verifie si un job run dejà pour ce capteur (simulation)
+    async checkJobStatus() {
+      try {
+        const response = await axios.get(`http://localhost:5000/api/sensors/job/${this.sensorId}/status`);
+        this.jobRunning = response.data.running;
+      } catch (error) {
+        console.error("Erreur lors de la vérification du statut du job :", error);
+      }
+    },
+
+    // activer la simulation
+    async toggleJob() {
+      try {
+        const action = this.jobRunning ? 'stop' : 'start';
+        const url = `http://localhost:5000/api/sensors/job/${this.sensorId}/${action}`;
+        await axios.post(url);
+        this.jobRunning = !this.jobRunning;
+      } catch (error) {
+        console.error("Erreur lors du changement de statut du job :", error);
+      }
     }
   },
 
   mounted() {
     this.fetchSensorHistory();
+    this.checkJobStatus();
   }
 };
 </script>

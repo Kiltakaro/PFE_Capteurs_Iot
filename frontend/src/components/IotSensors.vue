@@ -53,6 +53,7 @@
         <input v-model="newSensor.period" type="number" placeholder="Période" 
           class="w-full p-2 border border-gray-300 rounded" />
       </div>
+      <!-- JE SAIS PAS SI PERIOD ET FREQUENCE DOIVENT ETRE TOUS LES 2 MIS ET JE SAIS MEME PAS SI PERIODE MIN ET MAX SONT UTILES -->
       <div>
         <input v-model="newSensor.read_only" type="checkbox" 
           class="mr-2" /> Lecture seule
@@ -117,7 +118,7 @@ export default {
         console.log(response.data.message);
         this.alertMessage = "Capteur ajouté avec succès.";
         this.newSensor = { 
-          name: "", 
+          name: "",
           unit: "", 
           description: "",
           min_value: null,

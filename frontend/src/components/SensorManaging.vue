@@ -17,8 +17,13 @@
         <p><strong>Unité:</strong> {{ sensor.unit }}</p>
         <p><strong>Fréquence:</strong> {{ sensor.period }} s</p>
         <div class="mt-4">
-          <button @click="editSensor(sensor)" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-700 transition">Modifier</button>
+          <router-link :to="{ name: 'EditSensor', params: { id: sensor.uid } }">
+            <button class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-700 transition">Modifier</button>
+          </router-link>
           <button @click="confirmDelete(sensor.uid)" class="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-700 transition ml-2">Supprimer</button>
+          <router-link :to="{ name: 'SensorResult', params: { id: sensor.uid } }">
+            <button class="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-700 transition ml-2">Voir Simulation</button>
+          </router-link>
         </div>
       </div>
     </div>
@@ -63,10 +68,6 @@ export default {
       }
     },
 
-    editSensor(sensor) {
-      // Logique pour modifier le capteur a implementer
-      console.log("Modifier le capteur :", sensor);
-    },
 
     confirmDelete(uid) {
       if (confirm("Êtes-vous sûr de vouloir supprimer ce capteur ?")) {

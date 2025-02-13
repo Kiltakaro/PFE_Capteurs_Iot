@@ -26,3 +26,11 @@ CREATE TABLE sensor_data (
     value FLOAT,
     timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+-- pour stocker les valeurs des simulation
+CREATE TABLE sensor_history (
+    id SERIAL PRIMARY KEY,
+    sensor_uid UUID REFERENCES sensor_data(uid) ON DELETE CASCADE,
+    value FLOAT NOT NULL,
+    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);

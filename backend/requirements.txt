@@ -5,4 +5,6 @@ psycopg2-binary
 Werkzeug
 SQLAlchemy
 flask-jwt-extended
+pandas
 paho-mqtt
+apscheduler

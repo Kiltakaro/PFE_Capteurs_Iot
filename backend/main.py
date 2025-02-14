@@ -6,6 +6,7 @@ from werkzeug.security import check_password_hash, generate_password_hash
 from threading import Thread
 import os, uuid, time
 
+import datetime
 
 import paho.mqtt.client as mqtt
 import json
@@ -320,6 +321,8 @@ def delete_sensor(uid):
             manage_sensor_job(sensor, "delete")
             print(f"Job supprimé")
 
+    # Delete sensor history
+    delete_sensor_history_function(uid)
 
     db.session.delete(sensor)
     db.session.commit()
@@ -477,19 +480,45 @@ def delete_sensor_history(sensor_uid):
 
     sensor_uid : uid du capteur
     """
+    response, status_code = delete_sensor_history_function(sensor_uid)
+    return jsonify(response), status_code
+
+
+def delete_sensor_history_function(sensor_uid):
+    """
+    Helper function to delete all history data for a specific sensor
+    """
     try:
         history = SensorHistory.query.filter_by(sensor_uid=sensor_uid).all()
         if not history:
-            return jsonify({"message": "Aucune donnée historique trouvée pour ce capteur"}), 404
+            return {"message": "Aucune donnée historique trouvée pour ce capteur"}, 404
 
         for entry in history:
             db.session.delete(entry)
         db.session.commit()
 
-        return jsonify({"message": "Toutes les données historiques ont été supprimées pour ce capteur"}), 200
+        return {"message": "Toutes les données historiques ont été supprimées pour ce capteur"}, 200
 
     except Exception as e:
-        return jsonify({"error": f"Erreur lors de la suppression de l'historique: {e}"}), 500
+        return {"error": f"Erreur lors de la suppression de l'historique: {e}"}, 500
+
+
+@app.route('/api/sensors/simulate/<sensor_id>', methods=['GET'])
+def simulate_sensor(sensor_id):
+    duration = int(request.args.get('duration', 24))  # Durée en heures (par défaut 24h)
+    interval = int(request.args.get('interval', 10))  # Intervalle en minutes (par défaut 10min)
+
+    start_time = datetime.datetime.now() - datetime.timedelta(hours=duration)
+    simulated_data = []
+
+    num_points = (duration * 60) // interval  # Nombre total de points générés
+
+    for i in range(num_points):
+        timestamp = start_time + datetime.timedelta(minutes=i * interval)
+        value = round(random.uniform(10, 100), 2)  # Génération d'une valeur aléatoire
+        simulated_data.append({"timestamp": timestamp.isoformat(), "value": value})
+
+    return jsonify({"sensor_id": sensor_id, "history": simulated_data})
 
 ################## MQTT ####################
 

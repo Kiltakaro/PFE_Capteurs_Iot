@@ -520,6 +520,57 @@ def simulate_sensor(sensor_id):
 
     return jsonify({"sensor_id": sensor_id, "history": simulated_data})
 
+from scipy.interpolate import interp1d
+import numpy as np
+
+@app.route('/api/sensors/generate-curve', methods=['POST'])
+def generate_curve():
+    data = request.json
+    print("Received data:", data)  # Log les données reçues
+
+    if not data:
+        return jsonify({"error": "Requête vide ou format JSON invalide"}), 400
+
+    user_points = data.get("points", [])
+    duration = int(data.get("duration", 24))
+    interval = int(data.get("interval", 10))
+
+    if len(user_points) < 2:
+        return jsonify({"error": "Au moins 2 points sont nécessaires"}), 400
+
+    try:
+        timestamps = [datetime.datetime.utcnow() + datetime.timedelta(hours=p["x"]) for p in user_points]
+        values = [float(p["y"]) for p in user_points]
+        print("Timestamps:", timestamps)
+        print("Values:", values)
+    except KeyError as e:
+        return jsonify({"error": f"Clé manquante dans les points : {e}"}), 400
+    except ValueError as e:
+        return jsonify({"error": f"Format invalide des valeurs : {e}"}), 400
+    except Exception as e:
+        print("Erreur lors du traitement des points:", e)
+        return jsonify({"error": f"Erreur inattendue : {e}"}), 500
+
+    # Générer une interpolation
+    try:
+        x_numeric = np.linspace(0, len(timestamps) - 1, num=(duration * 60) // interval)
+        interpolator = interp1d(range(len(timestamps)), values, kind='linear')
+        y_generated = interpolator(x_numeric)
+    except Exception as e:
+        print("Erreur d'interpolation:", e)
+        return jsonify({"error": f"Erreur d'interpolation : {e}"}), 500
+
+    generated_data = []
+    start_time = timestamps[0]
+
+    for i in range(len(y_generated)):
+        timestamp = start_time + datetime.timedelta(minutes=i * interval)
+        generated_data.append({"timestamp": timestamp.isoformat(), "value": float(y_generated[i])})
+
+    return jsonify({"generated_curve": generated_data})
+
+
+
 ################## MQTT ####################
 
 # Création du client MQTT

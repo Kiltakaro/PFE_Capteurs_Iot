@@ -2,11 +2,9 @@
   <NavBar />
   <div class="container mx-auto p-4">
     <h2 class="text-2xl font-bold mb-4">Historique du capteur : {{ sensorName }}</h2>
-    <div>
-      <button @click="confirmDeleteHistory" class="bg-red-500 text-white px-4 py-2 rounded mt-4">
-        Supprimer l'historique du capteur
-      </button>
-    </div>
+    <button @click="confirmDeleteHistory" class="bg-red-500 text-white px-4 py-2 rounded mt-4">
+      Supprimer l'historique du capteur
+    </button>
     <!-- Boutons pour choisir la simulation -->
     <div class="flex space-x-4 mb-4">
       <button @click="selectedSimulation = 'realTime'"
@@ -23,17 +21,17 @@
       <button @click="selectedSimulation = 'simulation3'"
         :class="selectedSimulation === 'simulation3' ? 'bg-blue-600' : 'bg-gray-400'"
         class="text-white px-4 py-2 rounded">
-        Simulation 3
+        Simulation assistée
       </button>
 
       <button @click="selectedSimulation = 'simulation4'"
         :class="selectedSimulation === 'simulation4' ? 'bg-blue-600' : 'bg-gray-400'"
         class="text-white px-4 py-2 rounded">
-        Simulation 3
+        Simulation 4
       </button>
     </div>
 
-    <!-- Affichage en fonction de la simulation sélectionnée -->
+    <!-- SIMULATION 1-->
     <div v-if="selectedSimulation === 'realTime'" class="bg-white shadow-md rounded p-4">
       <CanvasJSChart v-if="options.data.length" :options="options" />
       <p v-else class="text-red-500"> Chargement des données... Ou peut-être données inexistantes ?</p>
@@ -44,6 +42,7 @@
       </button>
     </div>
 
+    <!-- SIMULATION 2 -->
     <div v-if="selectedSimulation === 'simulation2'" class="bg-white shadow-md rounded p-4">
       <p class="text-blue-500">Configurer la simulation :</p>
 
@@ -66,12 +65,16 @@
       <CanvasJSChart v-if="options.data.length" :options="options" class="mt-4 graph-large" />
     </div>
 
-    <div v-else-if="selectedSimulation === 'simulation3'" class="bg-white shadow-md rounded p-4">
-      <p class="text-green-500">Affichage de la Simulation 3 en cours...</p>
-    </div>
+    <!-- Simulation 3 -->
+    <div v-if="selectedSimulation === 'simulation3'" class="bg-white shadow-md rounded p-4">
+      <h3 class="text-xl font-semibold mb-2">Simulation assistée</h3>
 
-    <div v-else-if="selectedSimulation === 'simulation4'" class="bg-white shadow-md rounded p-4">
-      <p class="text-green-500">Affichage de la Simulation 4 en cours...</p>
+      <p class="text-blue-500">Cliquez sur le graphique pour ajouter des points :</p>
+
+      <CanvasJSChart ref="chart" :options="assistOptions" @click="addPoint" class="mt-4 graph-large" />
+      <button @click="generateCurve" class="bg-green-500 text-white px-4 py-2 rounded mt-4">
+        Générer la courbe
+      </button>
     </div>
   </div>
 </template>
@@ -93,13 +96,31 @@ export default {
       sensorName: "Capteur",
       selectedDuration: 24,  // Par défaut 24h
       selectedInterval: 10,  // Par défaut 10 min
+      userPoints: [],
       options: {
         animationEnabled: true,
         theme: "light2",
         title: { text: "Évolution des valeurs" },
         axisX: { title: "Temps", valueFormatString: "HH:mm:ss" },
-        axisY: { title: "Valeur", includeZero: false },
+        axisY: { title: "Valeur", includeZero: false, minimum: 0, maximum: 100 },
         data: [{ type: "line", dataPoints: [] }]
+      },
+      assistOptions: {
+        animationEnabled: true,
+        title: { text: "Définissez votre courbe" },
+        axisX: {
+          title: "Temps (h)",
+          minimum: 0,
+          maximum: 24, // Fixé à 24 heures
+          interval: 4, // Interval régulier (toutes les 4h)
+          labelFormatter: function (e) {
+            return `${e.value}h`; // Affiche 0h, 4h, 8h...
+          },
+          tickLength: 10,
+          gridThickness: 1,
+        },
+        axisY: { title: "Valeur", minimum: 0, maximum: 100 },
+        data: [{ type: "scatter", dataPoints: [] }]
       },
       jobRunning: false, // savoir si le la simulation est en cours 
       pollingInterval: null,  // pooling toutes periodes du capteur pour eviter des appels a l'api inutiles
@@ -138,8 +159,6 @@ export default {
       }
     },
 
-
-
     // verifie si un job run dejà pour ce capteur (simulation)
     async checkJobStatus() {
       try {
@@ -170,7 +189,6 @@ export default {
       }
     },
 
-
     // Start polling
     async startPolling() {
       await this.fetchSensorPeriod(); // Attendre d'obtenir la période
@@ -181,7 +199,6 @@ export default {
         }, this.period * 1000);
       }
     },
-
 
     // Stop polling
     stopPolling() {
@@ -219,39 +236,102 @@ export default {
         this.deleteSensorHistory();
       }
     },
-  },
 
-  ///////////////////////// SIMULATION 2 /////////////////////////
+    ///////////////////////// SIMULATION 2 /////////////////////////
 
-  async fetchCustomSimulation() {
-    try {
-      console.log(`Simulation de ${this.selectedDuration}h avec un intervalle de ${this.selectedInterval} min`);
+    async fetchCustomSimulation() {
+      try {
+        console.log(`Simulation de ${this.selectedDuration}h avec un intervalle de ${this.selectedInterval} min`);
 
-      const response = await axios.get(`http://localhost:5000/api/sensors/simulate/${this.sensorId}`, {
-        params: {
-          duration: this.selectedDuration,
-          interval: this.selectedInterval
+        const response = await axios.get(`http://localhost:5000/api/sensors/simulate/${this.sensorId}`, {
+          params: {
+            duration: this.selectedDuration,
+            interval: this.selectedInterval
+          }
+        });
+
+        const history = response.data.history;
+
+        if (history.length > 0) {
+          this.options.data[0].dataPoints = history.map(entry => ({
+            x: new Date(entry.timestamp),
+            y: entry.value
+          }));
+
+          this.options = { ...this.options };  // Met à jour le graphique
+          console.log("Simulation personnalisée chargée !");
         }
-      });
-
-      const history = response.data.history;
-
-      if (history.length > 0) {
-        this.options.data[0].dataPoints = history.map(entry => ({
-          x: new Date(entry.timestamp),
-          y: entry.value
-        }));
-
-        this.options = { ...this.options };  // Met à jour le graphique
-        console.log("Simulation personnalisée chargée !");
+      } catch (error) {
+        console.error("Erreur lors de la récupération des données simulées :", error);
       }
-    } catch (error) {
-      console.error("Erreur lors de la récupération des données simulées :", error);
+    },
+
+    ///////////////////////////// SIMULATION 3 /////////////////////////
+
+    addPoint(event) {
+      console.log("Graph clicked");
+
+      // Accéder à l'objet chart directement à partir de l'instance de CanvasJSChart
+      const chart = this.$refs.chart.chart;
+      console.log("Chart object:", chart);
+      console.log("Event object:", event);
+
+      // Récupére les coordonnées du clic relatives au canvas
+      const canvasRect = chart.canvas.getBoundingClientRect();
+      const xPixel = event.clientX - canvasRect.left;
+      const yPixel = event.clientY - canvasRect.top;
+
+      // Convertir les pixels en valeurs du graphique
+      const xValue = chart.axisX[0].convertPixelToValue(xPixel);
+      const yValue = chart.axisY[0].convertPixelToValue(yPixel);
+
+      console.log("Converted X value:", xValue);
+      console.log("Converted Y value:", yValue);
+
+      if (!isNaN(xValue) && !isNaN(yValue)) {
+        console.log(`xValue: ${xValue.toFixed(2)}h, yValue: ${yValue}`);
+        this.assistOptions.data[0].dataPoints.push({ x: xValue, y: yValue });
+        this.assistOptions = { ...this.assistOptions }; // Met à jour le graphique
+      } else {
+        console.error("Erreur de conversion des coordonnées");
+      }
+    },
+
+
+    async generateCurve() {
+      try {
+        const response = await axios.post("http://localhost:5000/api/sensors/generate-curve", {
+          points: this.assistOptions.data[0].dataPoints,
+          duration: 24, // Fixé à 24 heures
+          interval: 10, // Fixé à 10 minutes
+        });
+        console.log("Réponse API:", response.data);
+
+        const generatedCurve = response.data.generated_curve;
+        console.log("Données de la courbe:", generatedCurve);
+
+        if (generatedCurve && generatedCurve.length > 0) {
+          const formattedData = generatedCurve.map(point => ({
+            x: new Date(point.timestamp),
+            y: point.value
+          }));
+
+          this.options.data[0].dataPoints = formattedData;
+          this.options = { ...this.options }; // Force la mise à jour du graphique
+          console.log("Données formatées pour le graphique:", formattedData);
+        } else {
+          console.error("La courbe générée est vide ou mal formatée.");
+        }
+      } catch (error) {
+        console.error("Erreur lors de la génération de la courbe", error);
+      }
+    },
+
+    resetPoints() {
+      this.assistOptions.data[0].dataPoints = [];
+      this.assistOptions = { ...this.assistOptions }; // Met à jour le graphique
     }
   },
-
-  ///////////////////////////// SIMULATION 3 /////////////////////////
-
 
   async mounted() {
     await this.fetchSensorHistory();
@@ -263,13 +343,11 @@ export default {
     }
   },
 
-
   beforeUnmount() {
     this.stopPolling();
   }
 };
 </script>
-
 
 <style scoped>
 .graph-large {

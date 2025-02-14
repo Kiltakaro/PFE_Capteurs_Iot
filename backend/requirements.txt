@@ -8,3 +8,5 @@ flask-jwt-extended
 pandas
 paho-mqtt
 apscheduler
+scipy
+numpy

@@ -115,11 +115,11 @@ def create_user():
     is_admin = data.get('is_admin', False)
 
     if not username or not password:
-        return jsonify({"error": "Username and password are required"}), 400
+        return jsonify({"error": "Nom d'utilisateur et Mot de passe requis"}), 400
 
     # Vérification si le nom d'utilisateur existe déjà
     if User.query.filter_by(username=username).first():
-        return jsonify({"error": "User already exists"}), 400
+        return jsonify({"error": "Ustateur déjà existant"}), 400
 
     # Création de l'utilisateur
     new_user = User(username=username, is_admin=is_admin)
@@ -127,7 +127,7 @@ def create_user():
     db.session.add(new_user)
     db.session.commit()
 
-    return jsonify({"message": "User created successfully"}), 201
+    return jsonify({"message": "Utilisateur créé"}), 201
 
 
 # ROute a proteger je pense
@@ -155,7 +155,7 @@ def read_user():
     current_user = get_jwt_identity()
     user = User.query.filter_by(username=current_user).first()
     if not user:
-        return jsonify({"msg": "User not found"}), 404
+        return jsonify({"msg": "Utilisateur non existant"}), 404
     return jsonify({
         "id": user.id,
         "username": user.username,
@@ -177,7 +177,7 @@ def update_user():
     current_user = get_jwt_identity()
     user = User.query.filter_by(username=current_user).first()
     if not user:
-        return jsonify({"msg": "User not found"}), 404
+        return jsonify({"msg": "Utilisateur non existant"}), 404
 
     data = request.json
     username = data.get('username')
@@ -189,7 +189,7 @@ def update_user():
         user.set_password(password)
 
     db.session.commit()
-    return jsonify({"message": "User updated successfully"}), 200
+    return jsonify({"message": "User modifié"}), 200
 
 
 
@@ -205,11 +205,11 @@ def delete_user(user_id):
     
     user = db.session.get(User, user_id)
     if not user:
-        return jsonify({"error": "User not found"}), 404
+        return jsonify({"error": "Utilisateur non existant"}), 404
 
     db.session.delete(user)
     db.session.commit()
-    return jsonify({"message": "User deleted successfully"}), 200
+    return jsonify({"message": "User supprimé"}), 200
 
 
 ######################  LOGIN  #######################
@@ -299,7 +299,7 @@ def add_sensor():
     db.session.add(new_sensor)
     db.session.commit()
 
-    return jsonify({"message": "Capteur ajouté avec succès", "sensor": new_sensor.to_dict()}), 201
+    return jsonify({"message": "Capteur ajouté", "sensor": new_sensor.to_dict()}), 201
 
 
 @app.route('/api/sensors/<uuid:uid>', methods=['DELETE'])
@@ -388,55 +388,10 @@ def update_sensor(uid):
 
 
 
-    return jsonify({"message": "Capteur mis à jour avec succès", "sensor": sensor.to_dict()}), 200
+    return jsonify({"message": "Capteur mis à jour", "sensor": sensor.to_dict()}), 200
 
 
-########################## A FINIR ################
-######################### MQTT ####################
-# Création de la base de données (au démarrage uniquement pour dev)
-
-########## MQTT 
-# Connexion + Publish + Subscribe
-
-# Configuration du broker MQTT
-MQTT_BROKER = "mosquitto"  # Nom du container docker
-MQTT_PORT = 1883
-MQTT_TOPIC = "#" # Tous les topics
-
-def on_connect(client, userdata, flags, rc):
-    print(f"PARFAIT Connecté au broker MQTT avec le code {rc}")
-    client.subscribe(MQTT_TOPIC)
-
-
-# pour verifier 
-# curl http://localhost:5000/api/sensors/history
-def on_message(client, userdata, msg):
-    payload = msg.payload.decode()
-    print(f"YOUPIIIIIII Message reçu sur {msg.topic}: {payload}")
-
-    try:
-        data = json.loads(payload)
-        print(payload)
-        print(data)
-
-        sensor_uid = data["sensor_uid"]
-        value = data["value"]
-
-        with app.app_context():
-            sensor = SensorData.query.filter_by(uid=sensor_uid).first()
-            if sensor:
-                history_entry = SensorHistory(sensor_uid=sensor_uid, value=value)
-                db.session.add(history_entry)
-                db.session.commit()
-                print(f"Ajout en historique du capteur {sensor_uid}: {value} {sensor.unit}")
-            else:
-                print(f"Aucun capteur trouvé avec l'UID {sensor_uid}")
-
-    except Exception as e:
-        print(f"Erreur lors du traitement du message MQTT: {e}")
-
-
-######################## DONNEES SIMULEES ####################
+######################## STOCKAGE DONNEES SIMULEES ############################
 
 # curl http://localhost:5000/api/sensors/history
 @app.route('/api/sensors/history', methods=['GET'])
@@ -458,7 +413,7 @@ def get_sensor_history(sensor_uid):
     try:
         history = SensorHistory.query.filter_by(sensor_uid=sensor_uid).order_by(SensorHistory.timestamp.desc()).all()
         if not history:
-            return jsonify({"message": "Aucune donnée historique trouvée pour ce capteur"}), 404
+            return jsonify({"message": "Aucun historique trouvé pour ce capteur"}), 404
 
         history_data = [
             {
@@ -486,39 +441,80 @@ def delete_sensor_history(sensor_uid):
 
 def delete_sensor_history_function(sensor_uid):
     """
-    Helper function to delete all history data for a specific sensor
+    Fonction pour supprimer l'historique d'un capteur
     """
     try:
         history = SensorHistory.query.filter_by(sensor_uid=sensor_uid).all()
         if not history:
-            return {"message": "Aucune donnée historique trouvée pour ce capteur"}, 404
+            return {"message": "Aucun historique trouvé pour ce capteur"}, 404
 
         for entry in history:
             db.session.delete(entry)
         db.session.commit()
 
-        return {"message": "Toutes les données historiques ont été supprimées pour ce capteur"}, 200
+        return {"message": "Historique supprimé pour ce capteur"}, 200
 
     except Exception as e:
         return {"error": f"Erreur lors de la suppression de l'historique: {e}"}, 500
 
+########################## SIMULATION 1 ############################
+
+# A modifier pour mettre un SensorData en parametre
+def generate_sensor_data(sensor : SensorData):
+    """
+    Simule la génération de données pour un capteur spécifique
+
+    sensor : le capteur à simuler 
+    """
+    sensor_str_uid = str(sensor.uid)
+    with app.app_context():
+        # on mettra surement un delta la dedans 
+        value = random.uniform(sensor.min_value, sensor.max_value)  # Valeur aléatoire entre min et max
+        payload = {
+            "sensor_uid": sensor_str_uid, # l'uid ne se convertit pas automatiquement en string
+            "name": sensor.name,
+            "value": value,
+            "unit": sensor.unit
+        }
+        print(f"Envoi MQTT vers Topic: {sensor_str_uid}/datastore, Message: {json.dumps(payload)}")  # Debug
+        mqtt_client.publish(f"{sensor_str_uid}/datastore", json.dumps(payload))  # Publie sur le topic du capteur
+
+########################## SIMULATION 2 ############################
 
 @app.route('/api/sensors/simulate/<sensor_id>', methods=['GET'])
 def simulate_sensor(sensor_id):
-    duration = int(request.args.get('duration', 24))  # Durée en heures (par défaut 24h)
-    interval = int(request.args.get('interval', 10))  # Intervalle en minutes (par défaut 10min)
+    sensor_str_uid = str(sensor_id)
+    sensor = SensorData.query.filter_by(uid=sensor_id).first()
+    if not sensor:
+        return jsonify({"error": "Capteur inconnu"}), 404
+
+
+    duration = int(request.args.get('duration', 24))  # Durée en heures
+    interval = int(request.args.get('interval', 10))  # Intervalle en minutes
 
     start_time = datetime.datetime.now() - datetime.timedelta(hours=duration)
-    simulated_data = []
-
     num_points = (duration * 60) // interval  # Nombre total de points générés
 
     for i in range(num_points):
         timestamp = start_time + datetime.timedelta(minutes=i * interval)
-        value = round(random.uniform(10, 100), 2)  # Génération d'une valeur aléatoire
-        simulated_data.append({"timestamp": timestamp.isoformat(), "value": value})
+        value = round(random.uniform(sensor.min_value, sensor.max_value), 2)  # Génération a modifier
 
-    return jsonify({"sensor_id": sensor_id, "history": simulated_data})
+        payload = {
+            "sensor_uid": sensor_str_uid,
+            # "name": "idk yet", # a fix si nécessaire
+            "timestamp": timestamp.isoformat(),
+            "value": value
+        }
+
+        print(f"Envoi MQTT vers Topic: {sensor_str_uid}/datastore, Message: {json.dumps(payload)}")  # Debug
+        mqtt_client.publish(f"{sensor_str_uid}/datastore", json.dumps(payload))
+        time.sleep(0.1)  # Petit délai pour éviter de spammer MQTT trop vite
+
+    return jsonify({"message": f"Simulation envoyée via MQTT pour capteur {sensor_id}"}), 200
+
+
+########################### SIMULATION 3 ############################
+############# A REVOIR POUR FAIRE PASSER DANS LE MQTT ?
 
 from scipy.interpolate import interp1d
 import numpy as np
@@ -571,7 +567,48 @@ def generate_curve():
 
 
 
-################## MQTT ####################
+######################### MQTT ####################
+
+########## MQTT 
+# Connexion + Publish + Subscribe
+
+# Configuration du broker MQTT
+MQTT_BROKER = "mosquitto"  # Nom du container docker
+MQTT_PORT = 1883
+MQTT_TOPIC = "#" # Tous les topics
+
+def on_connect(client, userdata, flags, rc):
+    print(f"PARFAIT Connecté au broker MQTT avec le code {rc}")
+    client.subscribe(MQTT_TOPIC)
+
+
+# pour verifier 
+# curl http://localhost:5000/api/sensors/history
+def on_message(client, userdata, msg):
+    payload = msg.payload.decode()
+    print(f"YOUPIIIIIII Message reçu sur {msg.topic}: {payload}")
+
+    try:
+        data = json.loads(payload)
+        print(payload)
+        print(data)
+
+        sensor_uid = data["sensor_uid"]
+        value = data["value"]
+
+        with app.app_context():
+            sensor = SensorData.query.filter_by(uid=sensor_uid).first()
+            if sensor:
+                history_entry = SensorHistory(sensor_uid=sensor_uid, value=value)
+                db.session.add(history_entry)
+                db.session.commit()
+                print(f"Ajout dans l'historique du capteur {sensor_uid}: {value} {sensor.unit}")
+            else:
+                print(f"Aucun capteur trouvé avec l'UID {sensor_uid}")
+
+    except Exception as e:
+        print(f"Erreur lors du traitement du message MQTT: {e}")
+
 
 # Création du client MQTT
 mqtt_client = mqtt.Client()
@@ -613,30 +650,6 @@ def update_mqtt_config():
     mqtt_client.loop_start()
 
     return jsonify({"message": "Configuration MQTT mise à jour"}), 200
-
-################## SIMULATION CAPTEURS #######################
-
-
-# A modifier pour mettre un SensorData en parametre
-def generate_sensor_data(sensor : SensorData):
-    """
-    Simule la génération de données pour un capteur spécifique
-
-    sensor : le capteur à simuler 
-    """
-    sensor_str_uid = str(sensor.uid)
-    with app.app_context():
-        # on mettra surement un delta la dedans 
-        value = random.uniform(sensor.min_value, sensor.max_value)  # Valeur aléatoire entre min et max
-        payload = {
-            "sensor_uid": sensor_str_uid, # l'uid ne se convertit pas automatiquement en string
-            "name": sensor.name,
-            "value": value,
-            "unit": sensor.unit
-        }
-        print(f"Envoi MQTT vers Topic: {sensor_str_uid}/datastore, Message: {json.dumps(payload)}")  # Debug
-        mqtt_client.publish(f"{sensor_str_uid}/datastore", json.dumps(payload))  # Publie sur le topic du capteur
-        print(f"Envoi MQTT Confirmed")  # Debug
 
 
 ########## Scheduler
@@ -749,11 +762,7 @@ def manage_sensor_job(sensor: SensorData, action: str):
 
 
 
-# DECOMMENTER POUR TESTER LENVOI DANS LE MQTT
-# schedule_existing_sensors()
 scheduler.start()
-
-
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)

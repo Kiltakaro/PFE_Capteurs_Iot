@@ -72,9 +72,12 @@
       <p class="text-blue-500">Cliquez sur le graphique pour ajouter des points :</p>
 
       <CanvasJSChart ref="chart" :options="assistOptions" @click="addPoint" class="mt-4 graph-large" />
-      <button @click="generateCurve" class="bg-green-500 text-white px-4 py-2 rounded mt-4">
-        Générer la courbe
-      </button>
+      <div class="flex justify-center">
+        <button @click="generateCurve" class="bg-green-500 text-white px-4 py-2 rounded mt-4">
+          Générer la courbe
+        </button>
+      </div>
+      <CanvasJSChart :options="options" class="mt-4 graph-large" />
     </div>
   </div>
 </template>
@@ -102,7 +105,7 @@ export default {
         theme: "light2",
         title: { text: "Évolution des valeurs" },
         axisX: { title: "Temps", valueFormatString: "HH:mm:ss" },
-        axisY: { title: "Valeur", includeZero: false, minimum: 0, maximum: 100 },
+        axisY: { title: "Valeur", includeZero: false },
         data: [{ type: "line", dataPoints: [] }]
       },
       assistOptions: {
@@ -124,6 +127,7 @@ export default {
       },
       jobRunning: false, // savoir si le la simulation est en cours 
       pollingInterval: null,  // pooling toutes periodes du capteur pour eviter des appels a l'api inutiles
+      curveGenerated: false // pour cacher le graph de la simulation 3 si il n'y a pas de courbe générée.
     };
   },
 
@@ -142,8 +146,6 @@ export default {
         if (history.length > 0) {
           this.sensorName = response.data.sensor_uid;
           this.options.data[0].dataPoints = history.map(entry => ({
-            // probleme ça ne marche avec ce genre de date
-            // x: new Date(entry.timestamp).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
             x: new Date(entry.timestamp),
             y: entry.value
           }));
@@ -243,13 +245,21 @@ export default {
       try {
         console.log(`Simulation de ${this.selectedDuration}h avec un intervalle de ${this.selectedInterval} min`);
 
-        const response = await axios.get(`http://localhost:5000/api/sensors/simulate/${this.sensorId}`, {
+        // Fait la simulation
+        await axios.get(`http://localhost:5000/api/sensors/simulate/${this.sensorId}`, {
           params: {
             duration: this.selectedDuration,
             interval: this.selectedInterval
           }
         });
 
+        console.log("Simulation envoyée via MQTT. Attente avant récupération des données...");
+
+        // Attendre quelques secondes que MQTT stocke les données
+        await new Promise(resolve => setTimeout(resolve, 4000));  // Attente de 4 secondes
+
+        // Récupère l'historique depuis la base de données
+        const response = await axios.get(`http://localhost:5000/api/sensors/history/${this.sensorId}`);
         const history = response.data.history;
 
         if (history.length > 0) {
@@ -259,12 +269,16 @@ export default {
           }));
 
           this.options = { ...this.options };  // Met à jour le graphique
-          console.log("Simulation personnalisée chargée !");
+          console.log("Données historiques chargées !");
+        } else {
+          console.warn("Aucun historique disponible pour ce capteur.");
         }
       } catch (error) {
-        console.error("Erreur lors de la récupération des données simulées :", error);
+        console.error("Erreur lors de la simulation :", error);
       }
     },
+
+
 
     ///////////////////////////// SIMULATION 3 /////////////////////////
 
@@ -291,7 +305,7 @@ export default {
       if (!isNaN(xValue) && !isNaN(yValue)) {
         console.log(`xValue: ${xValue.toFixed(2)}h, yValue: ${yValue}`);
         this.assistOptions.data[0].dataPoints.push({ x: xValue, y: yValue });
-        this.assistOptions = { ...this.assistOptions }; // Met à jour le graphique
+        this.assistOptions = { ...this.assistOptions }; 
       } else {
         console.error("Erreur de conversion des coordonnées");
       }
@@ -317,8 +331,9 @@ export default {
           }));
 
           this.options.data[0].dataPoints = formattedData;
-          this.options = { ...this.options }; // Force la mise à jour du graphique
+          this.options = { ...this.options };
           console.log("Données formatées pour le graphique:", formattedData);
+          this.curveGenerated = true; // purement graphique
         } else {
           console.error("La courbe générée est vide ou mal formatée.");
         }
@@ -327,9 +342,10 @@ export default {
       }
     },
 
+    // a ajouter
     resetPoints() {
       this.assistOptions.data[0].dataPoints = [];
-      this.assistOptions = { ...this.assistOptions }; // Met à jour le graphique
+      this.assistOptions = { ...this.assistOptions };
     }
   },
 
@@ -338,7 +354,7 @@ export default {
     await this.checkJobStatus();
 
     if (this.jobRunning) {
-      console.log("Job déjà actif au chargement, démarrage du polling...");
+      console.log("Job déjà actif au chargement, polling");
       await this.startPolling();
     }
   },

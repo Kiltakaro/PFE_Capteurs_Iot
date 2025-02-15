@@ -582,32 +582,92 @@ def on_connect(client, userdata, flags, rc):
     client.subscribe(MQTT_TOPIC)
 
 
-# pour verifier 
-# curl http://localhost:5000/api/sensors/history
+
+# Pour lire les messages du MQTT et les traiter
 def on_message(client, userdata, msg):
     payload = msg.payload.decode()
-    print(f"YOUPIIIIIII Message reçu sur {msg.topic}: {payload}")
+    print(f"Message reçu sur {msg.topic}: {payload}")
 
     try:
         data = json.loads(payload)
-        print(payload)
-        print(data)
 
-        sensor_uid = data["sensor_uid"]
-        value = data["value"]
+        # Cas register
+        # if msg.topic.startswith("system/register"):
+        if msg.topic == "system/register":
+            sensor_uid = data["uid"]
+            with app.app_context():
+                existing_sensor = SensorData.query.filter_by(uid=sensor_uid).first()
+                
+                if existing_sensor:
+                    print(f"Le capteur {sensor_uid} existe déjà")
+        
+                else:            
+                    print(f"Le capteur error ?")
+                    description=data.get("description")
+                    # AJOUTER VERIF SI UNITE RFC8789 ?
+                    unit=data.get("unit") 
+                    min_value=data.get("min_value")
+                    max_value=data.get("max_value")
+                    delta_value=data.get("delta_value")
+                    period=data.get("period")
+                    min_period=data.get("min_period")
+                    max_period=data.get("max_period")
 
-        with app.app_context():
-            sensor = SensorData.query.filter_by(uid=sensor_uid).first()
-            if sensor:
-                history_entry = SensorHistory(sensor_uid=sensor_uid, value=value)
-                db.session.add(history_entry)
-                db.session.commit()
-                print(f"Ajout dans l'historique du capteur {sensor_uid}: {value} {sensor.unit}")
-            else:
-                print(f"Aucun capteur trouvé avec l'UID {sensor_uid}")
+                    read_only=data.get("read_only")
+                    if read_only.lower() == "true":
+                        read_only = True
+                    else:
+                        read_only = False
+
+                    value=data.get("value")
+
+
+
+                    new_sensor = SensorData(
+                        uid=sensor_uid,
+                        name=str(sensor_uid),
+                        description=description,
+                        unit=unit,
+                        min_value=min_value,
+                        max_value=max_value,
+                        delta_value=delta_value,
+                        period=period,
+                        min_period=min_period,
+                        max_period=max_period,
+                        read_only=read_only,
+                        value=value
+                    )
+                    print(f"Le capteur error 2")
+                    db.session.add(new_sensor)
+                    print(f"Le capteur error 3")
+                    db.session.commit()
+                    print(f"Capteur {sensor_uid} ajouté")
+
+        # Cas reception de données
+        else:
+            sensor_uid = data["sensor_uid"]
+            value = data.get("value")  # Peut être None si ce n'est pas une valeur de capteur
+
+            with app.app_context():
+                sensor = SensorData.query.filter_by(uid=sensor_uid).first()
+
+                # Cas capteur connu
+                if sensor:
+                    history_entry = SensorHistory(sensor_uid=sensor_uid, value=value)
+                    db.session.add(history_entry)
+                    db.session.commit()
+                    print(f"Ajout dans l'historique du capteur {sensor_uid}: {value} {sensor.unit}")
+
+                # Cas capteur inconnu => demande d'enregistrement
+                else:
+                    print(f"Capteur inconnu ({sensor_uid}), demande d'enregistrement")
+                    command_topic = f"{sensor_uid}/command"
+                    mqtt_client.publish(command_topic, json.dumps({"command": "REGISTER"}))
+                    print(f"Message REGISTER envoyé sur {command_topic}")
 
     except Exception as e:
         print(f"Erreur lors du traitement du message MQTT: {e}")
+
 
 
 # Création du client MQTT

@@ -12,7 +12,7 @@ CREATE TABLE users (
 CREATE TABLE sensor_data (
     uid UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     
-    name VARCHAR(100) NOT NULL, -- N'est pas dans l'exemple mais est demandée 
+    name VARCHAR(100) NOT NULL, -- N'est pas dans l'exemple mais est demandé
 
     description VARCHAR(255),
     unit VARCHAR(10) NOT NULL,

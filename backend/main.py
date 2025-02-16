@@ -462,7 +462,7 @@ def delete_sensor_history_function(sensor_uid):
 # A modifier pour mettre un SensorData en parametre
 def generate_sensor_data(sensor : SensorData):
     """
-    Simule la génération de données pour un capteur spécifique
+    Simule la génération en temps REEL de données pour un capteur spécifique
 
     sensor : le capteur à simuler 
     """
@@ -472,9 +472,8 @@ def generate_sensor_data(sensor : SensorData):
         value = random.uniform(sensor.min_value, sensor.max_value)  # Valeur aléatoire entre min et max
         payload = {
             "sensor_uid": sensor_str_uid, # l'uid ne se convertit pas automatiquement en string
-            "name": sensor.name,
             "value": value,
-            "unit": sensor.unit
+            "timestamp": datetime.datetime.now().isoformat(),
         }
         print(f"Envoi MQTT vers Topic: {sensor_str_uid}/datastore, Message: {json.dumps(payload)}")  # Debug
         mqtt_client.publish(f"{sensor_str_uid}/datastore", json.dumps(payload))  # Publie sur le topic du capteur
@@ -483,6 +482,11 @@ def generate_sensor_data(sensor : SensorData):
 
 @app.route('/api/sensors/simulate/<sensor_id>', methods=['GET'])
 def simulate_sensor(sensor_id):
+    """
+    Route pour simuler très rapidement un capteur spécifique
+
+    sensor_id : uid du capteur
+    """
     sensor_str_uid = str(sensor_id)
     sensor = SensorData.query.filter_by(uid=sensor_id).first()
     if not sensor:
@@ -594,12 +598,14 @@ def on_message(client, userdata, msg):
         # Cas register
         # if msg.topic.startswith("system/register"):
         if msg.topic == "system/register":
-            sensor_uid = data["uid"]
+            # sensor_uid = uuid.UUID(data.get("uid"))
+            sensor_uid = data.get("uid")
             with app.app_context():
                 existing_sensor = SensorData.query.filter_by(uid=sensor_uid).first()
                 
                 if existing_sensor:
                     print(f"Le capteur {sensor_uid} existe déjà")
+                    return
         
                 else:            
                     print(f"Le capteur error ?")
@@ -622,9 +628,8 @@ def on_message(client, userdata, msg):
                     value=data.get("value")
 
 
-
                     new_sensor = SensorData(
-                        uid=sensor_uid,
+                        uid=uuid.UUID(sensor_uid),
                         name=str(sensor_uid),
                         description=description,
                         unit=unit,
@@ -642,18 +647,22 @@ def on_message(client, userdata, msg):
                     print(f"Le capteur error 3")
                     db.session.commit()
                     print(f"Capteur {sensor_uid} ajouté")
+                    db.session.close()
+                    return
 
         # Cas reception de données
         else:
-            sensor_uid = data["sensor_uid"]
+            sensor_uid = data.get("sensor_uid")
+            timestamp = data.get("timestamp")
             value = data.get("value")  # Peut être None si ce n'est pas une valeur de capteur
 
             with app.app_context():
                 sensor = SensorData.query.filter_by(uid=sensor_uid).first()
-
+                print(f"Capteur {str(sensor.uid)} trouvé")
                 # Cas capteur connu
                 if sensor:
-                    history_entry = SensorHistory(sensor_uid=sensor_uid, value=value)
+                    print(f"Capteur connu ({sensor_uid})")
+                    history_entry = SensorHistory(sensor_uid=sensor_uid, value=value, timestamp=timestamp)
                     db.session.add(history_entry)
                     db.session.commit()
                     print(f"Ajout dans l'historique du capteur {sensor_uid}: {value} {sensor.unit}")

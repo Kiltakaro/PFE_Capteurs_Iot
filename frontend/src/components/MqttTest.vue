@@ -34,14 +34,6 @@
       </button>
     </div>
 
-    <div class="mb-4">
-      <h2 class="text-2xl font-bold mb-2">Messages reçus :</h2>
-      <ul>
-        <li v-for="(msg, index) in messages" :key="index" class="border-b py-2">
-          {{ msg }}
-        </li>
-      </ul>
-    </div>
   </div>
 </template>
 
@@ -63,9 +55,8 @@ export default {
     return {
       brokerUrl: "mosquitto", // Valeur par défaut
       brokerPort: 1883, // Valeur par défaut
-      topic: "sensor/data",
+      topic: "sensor_uid/datastore",
       message: "",
-      messages: [],
     };
   },
   methods: {

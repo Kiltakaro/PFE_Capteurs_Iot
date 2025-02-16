@@ -16,14 +16,14 @@ CREATE TABLE sensor_data (
 
     description VARCHAR(255),
     unit VARCHAR(10) NOT NULL,
-    min_value FLOAT,
-    max_value FLOAT,
-    delta_value FLOAT,
-    period INTEGER,
-    min_period INTEGER,
-    max_period INTEGER,
+    min_value FLOAT NOT NULL,
+    max_value FLOAT NOT NULL,
+    delta_value FLOAT DEFAULT 1,
+    period INTEGER NOT NULL,
+    min_period INTEGER DEFAULT 60,
+    max_period INTEGER DEFAULT 3600,
     read_only BOOLEAN DEFAULT FALSE,
-    value FLOAT,
+    value FLOAT DEFAULT 0,
     timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 

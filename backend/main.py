@@ -7,6 +7,9 @@ from threading import Thread
 import os, uuid, time
 
 import datetime
+from flask import Blueprint
+from werkzeug.utils import secure_filename
+import csv
 
 import paho.mqtt.client as mqtt
 import json
@@ -316,12 +319,11 @@ def delete_sensor(uid):
         return jsonify({"error": "Capteur inconnu"}), 404
 
 
-    # Si le capteur est en pleine simulation, il faut l'arretée
+    # Si le capteur est en pleine simulation, il faut l'arreter
     job = scheduler.get_job(uid)
     if job :
-        if old_period != sensor.period :
-            manage_sensor_job(sensor, "delete")
-            print(f"Job supprimé")
+        manage_sensor_job(sensor, "delete")
+        print(f"Job supprimé")
 
     # Delete sensor history
     delete_sensor_history_function(uid)
@@ -359,8 +361,8 @@ def update_sensor(uid):
     if not sensor:
         return jsonify({"error": "Capteur inconnu"}), 404
 
-    # Pour la simulation
-    # old_sensor = sensor.period
+    # Pour la simulation en temps réel
+    old_period = sensor.period
 
     data = request.json
     sensor.name = data.get('name', sensor.name)
@@ -444,6 +446,8 @@ def delete_sensor_history(sensor_uid):
 def delete_sensor_history_function(sensor_uid):
     """
     Fonction pour supprimer l'historique d'un capteur
+
+    sensor_id : uid du capteur
     """
     try:
         history = SensorHistory.query.filter_by(sensor_uid=sensor_uid).all()
@@ -459,7 +463,7 @@ def delete_sensor_history_function(sensor_uid):
     except Exception as e:
         return {"error": f"Erreur lors de la suppression de l'historique: {e}"}, 500
 
-########################## SIMULATION 1 ############################
+########################## SIMULATION GENERATION TEMPS REEL ############################
 
 # A modifier pour mettre un SensorData en parametre
 def generate_sensor_data(sensor : SensorData):
@@ -480,7 +484,7 @@ def generate_sensor_data(sensor : SensorData):
         print(f"Envoi MQTT vers Topic: {sensor_str_uid}/datastore, Message: {json.dumps(payload)}")  # Debug
         mqtt_client.publish(f"{sensor_str_uid}/datastore", json.dumps(payload))  # Publie sur le topic du capteur
 
-########################## SIMULATION 2 ############################
+########################## SIMULATION GENERATION RAPIDE ############################
 
 @app.route('/api/sensors/simulate/<sensor_id>', methods=['GET'])
 def simulate_sensor(sensor_id):
@@ -519,10 +523,7 @@ def simulate_sensor(sensor_id):
     return jsonify({"message": f"Simulation envoyée via MQTT pour capteur {sensor_id}"}), 200
 
 
-########################### SIMULATION 3 ############################
-############# A REVOIR POUR FAIRE PASSER DANS LE MQTT ?
-
-
+########################### GENERER COURBES AVEC POINTS DONNES ############################
 
 @app.route('/api/sensors/generate-curve', methods=['POST'])
 def generate_curve():
@@ -587,6 +588,68 @@ def generate_curve():
 
     return jsonify({"message": f"Simulation envoyée via MQTT pour capteur {sensor_uid}"}), 200
 
+######################################### IMPORT CSV ########################################
+
+bp = Blueprint('csv_upload', __name__)
+
+UPLOAD_FOLDER = "uploads"
+ALLOWED_EXTENSIONS = {"csv"}
+
+# Vérifier l'extension du fichier
+def allowed_file(filename):
+    return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
+
+@bp.route("/api/sensors/upload-csv/<uuid:sensor_id>", methods=["POST"])
+def upload_csv(sensor_id):
+    """
+    Route pour importer les données simulées / réelles d'un capteur à partir d'un fichier CSV
+    Le but est de lire le CSV pour inserer ses données dans la base de données sans sauvegarder le fichier
+
+    sensor_id : uid du capteur
+    """
+    if "file" not in request.files:
+        return jsonify({"error": "Aucun fichier envoyé"}), 400
+
+    file = request.files["file"]
+
+    if file.filename == "":
+        return jsonify({"error": "Nom de fichier invalide"}), 400
+
+    if not allowed_file(file.filename):
+        return jsonify({"error": "Format de fichier non autorisé"}), 400
+
+    try:
+        file.stream.seek(0)  # Mettre le poiteur au début du fichier
+        reader = csv.reader(file.stream.read().decode("utf-8").splitlines()) # Découpage
+        next(reader)  # Sauter l'en-tête
+
+        entries = []
+        for row in reader:
+            if len(row) != 2:
+                continue  # Ignore qui n'ont pas le format attendu
+            
+            value, timestamp = row
+            try:
+                value = float(value)
+                timestamp = datetime.datetime.strptime(timestamp, "%Y-%m-%d %H:%M:%S")
+            except ValueError as ve:
+                continue  # Ignore les lignes qui posent probleme
+
+            entries.append(SensorHistory(sensor_uid=sensor_id, value=value, timestamp=timestamp))
+
+        # Insértion dans la base de données
+        db.session.bulk_save_objects(entries)
+        db.session.commit()
+
+        return jsonify({"message": "Données insérées avec succès"}), 201
+
+    except Exception as e:
+        db.session.rollback()
+        print(f"Erreur lors de l'import: {e}")
+        return jsonify({"error": f"Erreur lors de l'import : {str(e)}"}), 500
+
+app.register_blueprint(bp)
+
 
 
 ######################### MQTT ####################
@@ -613,10 +676,8 @@ def on_message(client, userdata, msg):
     try:
         data = json.loads(payload)
 
-        # Cas register
-        # if msg.topic.startswith("system/register"):
+        # Cas enregistrement de capteur
         if msg.topic == "system/register":
-            # sensor_uid = uuid.UUID(data.get("uid"))
             sensor_uid = data.get("uid")
             with app.app_context():
                 existing_sensor = SensorData.query.filter_by(uid=sensor_uid).first()
@@ -721,6 +782,9 @@ def publish_mqtt():
 
 @app.route('/api/mqtt/config', methods=['POST'])
 def update_mqtt_config():
+    """
+    Route pour configurer la connexion au broker depuis le front
+    """
     global MQTT_BROKER, MQTT_PORT, MQTT_TOPIC, mqtt_client
 
     data = request.json

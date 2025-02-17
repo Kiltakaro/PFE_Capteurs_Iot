@@ -22,10 +22,10 @@
         Simulation assistée
       </button>
 
-      <button @click="selectedSimulation = 'simulation4'"
-        :class="selectedSimulation === 'simulation4' ? 'bg-blue-600' : 'bg-gray-400'"
+      <button @click="selectedSimulation = 'importCsv'"
+        :class="selectedSimulation === 'importCsv' ? 'bg-blue-600' : 'bg-gray-400'"
         class="text-white px-4 py-2 rounded">
-        Simulation 4
+        Import CSV
       </button>
     </div>
 
@@ -50,7 +50,7 @@
 
     </div>
 
-    <!-- SIMULATION 2 -->
+    <!-- Simulation Rapide -->
     <div v-if="selectedSimulation === 'simulation2'" class="bg-white shadow-md rounded p-4">
       <p class="text-blue-500">Configurer la simulation :</p>
 
@@ -79,7 +79,7 @@
       <CanvasJSChart v-if="options.data.length" :options="options" class="mt-4 graph-large" />
     </div>
 
-    <!-- Simulation 3 -->
+    <!-- Génération Courbe à partir de points -->
     <div v-if="selectedSimulation === 'simulation3'" class="bg-white shadow-md rounded p-4">
       <h3 class="text-xl font-semibold mb-2">Simulation assistée</h3>
 
@@ -101,6 +101,20 @@
       </div>
       <CanvasJSChart :options="options" class="mt-4 graph-large" />
     </div>
+
+    <!-- Import CSV -->
+    <div v-if="selectedSimulation === 'importCsv'" class="bg-white shadow-md rounded p-4">
+      <h3 class="text-xl font-semibold mb-2">Importer un fichier CSV</h3>
+
+      <input type="file" @change="handleFileUpload" accept=".csv" class="border p-2 rounded w-full mb-4" />
+
+      <button @click="uploadCsv" class="bg-green-500 text-white px-4 py-2 rounded">
+        Envoyer le fichier
+      </button>
+
+      <CanvasJSChart v-if="options.data.length" :options="options" class="mt-4 graph-large" />
+    </div>
+
   </div>
 </template>
 
@@ -149,7 +163,8 @@ export default {
       },
       jobRunning: false, // savoir si le la simulation est en cours 
       pollingInterval: null,  // pooling toutes periodes du capteur pour eviter des appels a l'api inutiles
-      curveGenerated: false // pour cacher le graph de la simulation 3 si il n'y a pas de courbe générée.
+      curveGenerated: false, // pour cacher le graph de la simulation 3 si il n'y a pas de courbe générée.
+      selectedFile: null // Fichier CSV sélectionné
     };
   },
 
@@ -373,8 +388,42 @@ export default {
     resetPoints() {
       this.assistOptions.data[0].dataPoints = [];
       this.assistOptions = { ...this.assistOptions };
+    },
+
+    //////////////////////////////////////// SIMULATION 4 ///////////////////////////////
+
+    handleFileUpload(event) {
+      this.selectedFile = event.target.files[0];
+    },
+
+    async uploadCsv() {
+      if (!this.selectedFile) {
+        alert("Veuillez sélectionner un fichier CSV.");
+        return;
+      }
+      console.log("Fichier sélectionné :", this.selectedFile);
+
+      const formData = new FormData();
+      formData.append("file", this.selectedFile);
+
+      try {
+        const response = await axios.post(`http://localhost:5000/api/sensors/upload-csv/${this.sensorId}`, formData, {
+          headers: { "Content-Type": "multipart/form-data" }
+        });
+
+        alert(response.data.message);
+
+        // Charger les données importées et mettre à jour le graph
+        this.fetchSensorHistory();
+      } catch (error) {
+        console.error("Erreur lors de l'import du fichier CSV :", error.response ? error.response.data : error.message);
+        alert("Erreur lors de l'import du fichier.");
+      }
     }
+
   },
+
+  //////////////////////////////////////// Autre ///////////////////////////////
 
   async mounted() {
     await this.fetchSensorHistory();

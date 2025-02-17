@@ -15,6 +15,8 @@ from apscheduler.schedulers.background import BackgroundScheduler
 import logging
 import pandas as pd
 import sys
+from scipy.interpolate import interp1d
+import numpy as np
 
 
 logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
@@ -520,20 +522,27 @@ def simulate_sensor(sensor_id):
 ########################### SIMULATION 3 ############################
 ############# A REVOIR POUR FAIRE PASSER DANS LE MQTT ?
 
-from scipy.interpolate import interp1d
-import numpy as np
+
 
 @app.route('/api/sensors/generate-curve', methods=['POST'])
 def generate_curve():
+    """
+    Génére une courbe en fonction des points données
+
+    Arguments attendus :
+    sensor_uid : uid du capteur
+    points : liste de points (x, y) pour l'interpolation
+    """
     data = request.json
     print("Received data:", data)  # Log les données reçues
+    sensor_uid = data.get("sensor_uid")
 
     if not data:
         return jsonify({"error": "Requête vide ou format JSON invalide"}), 400
 
     user_points = data.get("points", [])
-    duration = int(data.get("duration", 24))
-    interval = int(data.get("interval", 10))
+    duration = 24
+    interval = 10
 
     if len(user_points) < 2:
         return jsonify({"error": "Au moins 2 points sont nécessaires"}), 400
@@ -560,14 +569,23 @@ def generate_curve():
         print("Erreur d'interpolation:", e)
         return jsonify({"error": f"Erreur d'interpolation : {e}"}), 500
 
-    generated_data = []
     start_time = timestamps[0]
 
     for i in range(len(y_generated)):
         timestamp = start_time + datetime.timedelta(minutes=i * interval)
-        generated_data.append({"timestamp": timestamp.isoformat(), "value": float(y_generated[i])})
+        value = float(y_generated[i])
 
-    return jsonify({"generated_curve": generated_data})
+        # Publier les données générées sur MQTT
+        payload = {
+            "sensor_uid": str(sensor_uid),
+            "timestamp": timestamp.isoformat(),
+            "value": value
+        }
+        print(f"Envoi MQTT vers Topic: {sensor_uid}/datastore, Message: {json.dumps(payload)}")  # Debug
+        mqtt_client.publish(f"{sensor_uid}/datastore", json.dumps(payload))
+        time.sleep(0.1)  # Petit délai pour éviter de spammer MQTT trop vite
+
+    return jsonify({"message": f"Simulation envoyée via MQTT pour capteur {sensor_uid}"}), 200
 
 
 

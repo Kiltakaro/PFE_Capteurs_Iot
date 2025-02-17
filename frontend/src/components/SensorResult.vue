@@ -2,9 +2,7 @@
   <NavBar />
   <div class="container mx-auto p-4">
     <h2 class="text-2xl font-bold mb-4">Historique du capteur : {{ sensorName }}</h2>
-    <button @click="confirmDeleteHistory" class="bg-red-500 text-white px-4 py-2 rounded mt-4">
-      Supprimer l'historique du capteur
-    </button>
+
     <!-- Boutons pour choisir la simulation -->
     <div class="flex space-x-4 mb-4">
       <button @click="selectedSimulation = 'realTime'"
@@ -33,13 +31,23 @@
 
     <!-- SIMULATION 1-->
     <div v-if="selectedSimulation === 'realTime'" class="bg-white shadow-md rounded p-4">
-      <CanvasJSChart v-if="options.data.length" :options="options" />
-      <p v-else class="text-red-500"> Chargement des données... Ou peut-être données inexistantes ?</p>
 
-      <button @click="toggleJob" :class="jobRunning ? 'bg-red-500' : 'bg-green-500'"
-        class="text-white px-4 py-2 rounded mt-4">
-        {{ jobRunning ? 'Arrêter la simulation' : 'Démarrer la simulation' }}
-      </button>
+
+      <div class="flex justify-between mt-4 gap-2">
+        <button @click="toggleJob" :class="jobRunning ? 'bg-orange-500' : 'bg-green-500'"
+          class="text-white px-4 py-2 rounded">
+          {{ jobRunning ? 'Arrêter la simulation' : 'Démarrer la simulation' }}
+        </button>
+
+        <button @click="confirmDeleteHistory" class="bg-red-500 text-white px-4 py-2 rounded">
+          Supprimer l'historique du capteur
+        </button>
+      </div>
+
+
+      <CanvasJSChart v-if="options.data.length" :options="options" />
+      <p v-else class="text-orange-500"> Chargement des données... Ou peut-être données inexistantes ?</p>
+
     </div>
 
     <!-- SIMULATION 2 -->
@@ -58,9 +66,15 @@
       <label class="block mt-4">Intervalle entre points : {{ selectedInterval }} minutes</label>
       <input type="range" v-model="selectedInterval" min="5" max="60" step="5" class="w-full">
 
-      <button @click="fetchCustomSimulation" class="bg-green-500 text-white px-4 py-2 rounded mt-4">
-        Lancer la simulation
-      </button>
+      <div class="flex justify-between mt-4 gap-2">
+        <button @click="fetchCustomSimulation" class="bg-green-500 text-white px-4 py-2 rounded">
+          Lancer la simulation
+        </button>
+
+        <button @click="confirmDeleteHistory" class="bg-red-500 text-white px-4 py-2 rounded">
+          Supprimer l'historique du capteur
+        </button>
+      </div>
 
       <CanvasJSChart v-if="options.data.length" :options="options" class="mt-4 graph-large" />
     </div>
@@ -72,9 +86,17 @@
       <p class="text-blue-500">Cliquez sur le graphique pour ajouter des points :</p>
 
       <CanvasJSChart ref="chart" :options="assistOptions" @click="addPoint" class="mt-4 graph-large" />
-      <div class="flex justify-center">
-        <button @click="generateCurve" class="bg-green-500 text-white px-4 py-2 rounded mt-4">
+      <div class="flex justify-between mt-4 gap-2">
+        <button @click="generateCurve" class="bg-green-500 text-white px-4 py-2 rounded">
           Générer la courbe
+        </button>
+
+        <button @click="resetPoints" class="bg-purple-600 text-white px-4 py-2 rounded">
+          Réinitialiser les points
+        </button>
+
+        <button @click="confirmDeleteHistory" class="bg-red-500 text-white px-4 py-2 rounded">
+          Supprimer l'historique du capteur
         </button>
       </div>
       <CanvasJSChart :options="options" class="mt-4 graph-large" />
@@ -305,29 +327,35 @@ export default {
       if (!isNaN(xValue) && !isNaN(yValue)) {
         console.log(`xValue: ${xValue.toFixed(2)}h, yValue: ${yValue}`);
         this.assistOptions.data[0].dataPoints.push({ x: xValue, y: yValue });
-        this.assistOptions = { ...this.assistOptions }; 
+        this.assistOptions = { ...this.assistOptions };
       } else {
         console.error("Erreur de conversion des coordonnées");
       }
     },
 
-
     async generateCurve() {
       try {
-        const response = await axios.post("http://localhost:5000/api/sensors/generate-curve", {
+        // Appel à l'API pour générer la courbe
+        const response = await axios.post(`http://localhost:5000/api/sensors/generate-curve`, {
+          sensor_uid: this.sensorId,
           points: this.assistOptions.data[0].dataPoints,
           duration: 24, // Fixé à 24 heures
           interval: 10, // Fixé à 10 minutes
         });
         console.log("Réponse API:", response.data);
 
-        const generatedCurve = response.data.generated_curve;
-        console.log("Données de la courbe:", generatedCurve);
+        // Attendre quelques secondes que MQTT stocke les données
+        await new Promise(resolve => setTimeout(resolve, 4000));  // Attente de 4 secondes
 
-        if (generatedCurve && generatedCurve.length > 0) {
-          const formattedData = generatedCurve.map(point => ({
-            x: new Date(point.timestamp),
-            y: point.value
+        // Récupérer l'historique depuis la base de données
+        const historyResponse = await axios.get(`http://localhost:5000/api/sensors/history/${this.sensorId}`);
+        const history = historyResponse.data.history;
+        console.log("Historique récupéré :", history);
+
+        if (history.length > 0) {
+          const formattedData = history.map(entry => ({
+            x: new Date(entry.timestamp),
+            y: entry.value
           }));
 
           this.options.data[0].dataPoints = formattedData;
@@ -335,14 +363,13 @@ export default {
           console.log("Données formatées pour le graphique:", formattedData);
           this.curveGenerated = true; // purement graphique
         } else {
-          console.error("La courbe générée est vide ou mal formatée.");
+          console.error("L'historique est vide ou mal formaté.");
         }
       } catch (error) {
         console.error("Erreur lors de la génération de la courbe", error);
       }
     },
 
-    // a ajouter
     resetPoints() {
       this.assistOptions.data[0].dataPoints = [];
       this.assistOptions = { ...this.assistOptions };

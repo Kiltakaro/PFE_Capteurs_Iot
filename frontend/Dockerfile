@@ -8,10 +8,6 @@ COPY package*.json ./
 
 # Installer les dépendances
 RUN npm install
-RUN npm install vue-router
-RUN npm install -D tailwindcss@3 postcss autoprefixer
-RUN npm install @canvasjs/vue-charts
-RUN npm install chart.js vue-chartjs
 
 # RUN npm install chart.js vue-chart-3
 # RUN npm install mqtt --save

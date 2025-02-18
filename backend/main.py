@@ -1,30 +1,25 @@
+import paho.mqtt.client as mqtt
+import os, uuid, time, sys, logging, random, json, csv, datetime
+import pandas as pd
+import numpy as np
+
 from flask import Flask, jsonify, request, Blueprint
 from flask_cors import CORS
 from flask_sqlalchemy import SQLAlchemy
 from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity
 from werkzeug.security import check_password_hash, generate_password_hash
 from werkzeug.utils import secure_filename
-
 from apscheduler.schedulers.background import BackgroundScheduler
 from threading import Thread 
- 
-import paho.mqtt.client as mqtt
-
-import os, uuid, time, sys, logging, random, json, csv, datetime
-
-from scipy.interpolate import interp1d 
-import pandas as pd
-import numpy as np
-
+from scipy.interpolate import interp1d
+from datetime import datetime
 
 from models import db, User, SensorData, SensorHistory, SensorTemplate
-
 from users import users_bp
 
 
 logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
 logging.getLogger('apscheduler').setLevel(logging.DEBUG)
-
 
 time.sleep(5)
 

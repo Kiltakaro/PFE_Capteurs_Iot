@@ -12,6 +12,7 @@ import NotFound from './components/NotFound.vue'
 import UserProfile from './components/UserProfile.vue'
 import HomeComponent from './components/HomeComponent.vue'
 import SensorManaging from './components/SensorManaging.vue'
+import CreateTemplate from './components/CreateTemplate.vue'
 import MqttTest from './components/MqttTest.vue'
 
 import './assets/tailwind.css'; // Pas toucher, SANS ça pas de tailwindcss
@@ -50,6 +51,11 @@ const router = VueRouter.createRouter({
       path:'/sensors',
       name: 'SensorsPage',
       component: IotSensors
+    },
+    {
+      path: "/template",
+      name: "CreateTemplate",
+      component: CreateTemplate
     },
     {
       path: '/edit-sensor/:id',

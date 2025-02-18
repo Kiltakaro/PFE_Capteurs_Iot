@@ -8,6 +8,7 @@
                 to="/admindashboard">AdminDashboard</router-link>
             <router-link class="hover:text-gray-300 text-lg" to="/sensors">SensorsPage</router-link>
             <router-link class="hover:text-gray-300 text-lg" to="/sensormanaging">SensorManaging</router-link>
+            <router-link class="hover:text-gray-300 text-lg" to="/template">Créer un Modèle</router-link>
             <router-link class="hover:text-gray-300 text-lg" to="/mqtttest">MqttTest</router-link>
         </div>
         <div class="space-x-4">

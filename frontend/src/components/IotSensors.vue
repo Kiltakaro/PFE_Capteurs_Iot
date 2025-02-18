@@ -149,6 +149,7 @@ export default {
       }
     },
 
+    // Récupère toutes les templates
     async fetchTemplates() {
       try {
         const response = await axios.get(`http://${ip}:5000/api/templates`, {
@@ -160,6 +161,7 @@ export default {
       }
     },
 
+    // Remplit les champs avec ceux de la template
     applyTemplate() {
       const template = this.templates.find(t => t.id === this.selectedTemplate);
       if (template) {

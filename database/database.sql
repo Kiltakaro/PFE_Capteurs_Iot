@@ -34,3 +34,18 @@ CREATE TABLE sensor_history (
     value FLOAT NOT NULL,
     timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+-- Templates de capteurs
+CREATE TABLE sensor_templates (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(100) UNIQUE NOT NULL,  -- Nom du modèle
+    description VARCHAR(255),
+    unit VARCHAR(10) NOT NULL,
+    min_value FLOAT NOT NULL,
+    max_value FLOAT NOT NULL,
+    delta_value FLOAT DEFAULT 1,
+    period INTEGER NOT NULL,
+    min_period INTEGER DEFAULT 60,
+    max_period INTEGER DEFAULT 3600,
+    read_only BOOLEAN DEFAULT FALSE
+);

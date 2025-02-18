@@ -17,7 +17,7 @@ import pandas as pd
 import numpy as np
 
 
-from models import db, User, SensorData, SensorHistory
+from models import db, User, SensorData, SensorHistory, SensorTemplate
 
 from users import users_bp
 
@@ -253,6 +253,80 @@ def update_sensor(uid):
 
 
     return jsonify({"message": "Capteur mis à jour", "sensor": sensor.to_dict()}), 200
+
+@app.route('/api/templates', methods=['GET'])
+@jwt_required()
+def get_templates():
+    """
+    Route pour récupérer toutes les templates de capteurs
+    """
+    templates = SensorTemplate.query.all()
+    return jsonify([{
+        "id": template.id,
+        "name": template.name,
+        "description": template.description,
+        "unit": template.unit,
+        "min_value": template.min_value,
+        "max_value": template.max_value,
+        "delta_value": template.delta_value,
+        "period": template.period,
+        "min_period": template.min_period,
+        "max_period": template.max_period,
+        "read_only": template.read_only
+    } for template in templates]), 200
+
+@app.route('/api/templates', methods=['POST'])
+@jwt_required()
+def create_template():
+    """
+    Route pour créer une template
+    """
+    data = request.json
+    name = data.get('name')
+    description = data.get('description')
+    unit = data.get('unit')
+    min_value = data.get('min_value')
+    max_value = data.get('max_value')
+    delta_value = data.get('delta_value')
+    period = data.get('period')
+    min_period = data.get('min_period')
+    max_period = data.get('max_period')
+    read_only = data.get('read_only', False)
+
+    # Vérifie si un modèle avec le même nom existe
+    if SensorTemplate.query.filter_by(name=name).first():
+        return jsonify({"error": "Template name already exists"}), 400
+
+    new_template = SensorTemplate(
+        name=name,
+        description=description,
+        unit=unit,
+        min_value=min_value,
+        max_value=max_value,
+        delta_value=delta_value,
+        period=period,
+        min_period=min_period,
+        max_period=max_period,
+        read_only=read_only
+    )
+    db.session.add(new_template)
+    db.session.commit()
+
+    return jsonify({"message": "Template created successfully"}), 201
+
+@app.route('/api/templates/<int:template_id>', methods=['DELETE'])
+@jwt_required()
+def delete_template(template_id):
+    """
+    Route pour supprimer une template
+    """
+    template = db.session.get(SensorTemplate, template_id)
+    if not template:
+        return jsonify({"error": "Template not found"}), 404
+
+    db.session.delete(template)
+    db.session.commit()
+    return jsonify({"message": "Template deleted successfully"}), 200
 
 
 ######################## STOCKAGE DONNEES SIMULEES ############################

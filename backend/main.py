@@ -1,5 +1,6 @@
 import paho.mqtt.client as mqtt
 import os, uuid, time, sys, logging, random, json, csv, datetime
+
 import pandas as pd
 import numpy as np
 
@@ -12,7 +13,6 @@ from werkzeug.utils import secure_filename
 from apscheduler.schedulers.background import BackgroundScheduler
 from threading import Thread 
 from scipy.interpolate import interp1d
-from datetime import datetime
 
 from models import db, User, SensorData, SensorHistory, SensorTemplate
 from users import users_bp
@@ -175,10 +175,7 @@ def delete_sensor(uid):
 
 
     # Si le capteur est en pleine simulation, il faut l'arreter
-    job = scheduler.get_job(uid)
-    if job :
-        manage_sensor_job(sensor, "delete")
-        print(f"Job supprimé")
+    manage_sensor_job(sensor, "delete")
 
     # Delete sensor history
     delete_sensor_history_function(uid)

@@ -7,16 +7,16 @@ import * as VueRouter from 'vue-router'
 // Importation des composants pour les routes
 import LoginPage from './components/LoginPage.vue'
 import AdminDashboard from './components/AdminDashboard.vue'
-import IotSensors from './components/IotSensors.vue'
-import NotFound from './components/NotFound.vue'
+import SensorCreate from './components/SensorCreate.vue'
+// import NotFound from './components/NotFound.vue'
 import UserProfile from './components/UserProfile.vue'
 import HomeComponent from './components/HomeComponent.vue'
 import SensorManaging from './components/SensorManaging.vue'
 import CreateTemplate from './components/CreateTemplate.vue'
-import MqttTest from './components/MqttTest.vue'
+import MqttConfig from './components/MqttConfig.vue'
 
 import './assets/tailwind.css'; // Pas toucher, SANS ça pas de tailwindcss
-import EditSensor from './components/EditSensor.vue'
+import SensorEdit from './components/SensorEdit.vue'
 import SensorResult from './components/SensorResult.vue'
 import CanvasJSChart from '@canvasjs/vue-charts';
 
@@ -32,11 +32,6 @@ const router = VueRouter.createRouter({
       component: HomeComponent
     },
     {
-      path: '/sensormanaging',
-      name: 'SensorManaging',
-      component: SensorManaging
-    },
-    {
       path:'/login',
       name: 'LoginPage',
       component: LoginPage
@@ -45,12 +40,11 @@ const router = VueRouter.createRouter({
       path: '/admindashboard',
       name: 'AdminDashboard',
       component: AdminDashboard,
-      // meta: { requiresAuth: true, requiresAdmin: true }, // Protège la route
     },
     {
-      path:'/sensors',
-      name: 'SensorsPage',
-      component: IotSensors
+      path: '/userprofile',
+      name: 'UserProfile',
+      component: UserProfile
     },
     {
       path: "/template",
@@ -58,19 +52,14 @@ const router = VueRouter.createRouter({
       component: CreateTemplate
     },
     {
-      path: '/edit-sensor/:id',
-      name: 'EditSensor',
-      component: EditSensor
-    },    
-    {
-      path: '/userprofile',
-      name: 'UserProfile',
-      component: UserProfile
+      path:'/sensors',
+      name: 'SensorsPage',
+      component: SensorCreate
     },
     {
-      path: '/mqtttest',
-      name: 'MqttTest',
-      component: MqttTest
+      path: '/sensormanaging',
+      name: 'SensorManaging',
+      component: SensorManaging
     },
     {
       path: '/result-sensors/:id',
@@ -78,10 +67,20 @@ const router = VueRouter.createRouter({
       component: SensorResult
     },
     {
-      path: '/*', // Capture toutes les routes non définies
-      name: 'NotFound',
-      component: NotFound,
+      path: '/edit-sensor/:id',
+      name: 'SensorEdit',
+      component: SensorEdit
+    },    
+    {
+      path: '/mqttconfig',
+      name: 'MqttConfig',
+      component: MqttConfig
     },
+    // {
+    //   path: '/*', // Capture toutes les routes non définies
+    //   name: 'NotFound',
+    //   component: NotFound,
+    // },
   ]
 })
 //  path: '/:pathMatch(.*)*'
@@ -137,7 +136,3 @@ const app = createApp(App);
 app.use(router);
 app.use(CanvasJSChart); // install the CanvasJS Vuejs Chart Plugin
 app.mount('#app');
-
-// createApp(App)
-//   .use(router)
-//   .mount('#app'); // Montage de l'application Vue sur l'élément #app

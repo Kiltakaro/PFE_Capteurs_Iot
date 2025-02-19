@@ -19,7 +19,7 @@
         <div class="bg-white p-6 rounded-lg shadow-md">
           <h2 class="text-2xl font-bold mb-2">Tests MQTT</h2>
           <p>Testez la communication MQTT avec vos capteurs.</p>
-          <router-link to="/mqtttest" class="text-blue-500 hover:underline mt-4 inline-block">Voir plus</router-link>
+          <router-link to="/mqttconfig" class="text-blue-500 hover:underline mt-4 inline-block">Voir plus</router-link>
         </div>
       </div>
     </div>

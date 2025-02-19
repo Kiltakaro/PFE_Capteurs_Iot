@@ -45,7 +45,7 @@ import NavBar from "./NavBar.vue";
 
 export default {
 
-  name: 'MqttTest',
+  name: 'MqttConfig',
 
   components: {
     NavBar

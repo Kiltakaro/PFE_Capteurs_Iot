@@ -5,11 +5,11 @@
         </div>
         <div class="space-x-4 flex-1 text-center">
             <router-link v-if="isAdmin" class="hover:text-gray-300 text-lg"
-                to="/admindashboard">AdminDashboard</router-link>
-            <router-link class="hover:text-gray-300 text-lg" to="/sensors">SensorsPage</router-link>
-            <router-link class="hover:text-gray-300 text-lg" to="/sensormanaging">SensorManaging</router-link>
+                to="/admindashboard">Admin Dashboard</router-link>
+            <router-link class="hover:text-gray-300 text-lg" to="/sensors">Créer un Capteur</router-link>
+            <router-link class="hover:text-gray-300 text-lg" to="/sensormanaging">Capteurs Dashboard</router-link>
             <router-link class="hover:text-gray-300 text-lg" to="/template">Créer un Modèle</router-link>
-            <router-link class="hover:text-gray-300 text-lg" to="/mqtttest">MqttTest</router-link>
+            <router-link class="hover:text-gray-300 text-lg" to="/mqttconfig">Configurer MQTT</router-link>
         </div>
         <div class="space-x-4">
             <router-link class="hover:text-gray-300" to="/">Accueil</router-link>

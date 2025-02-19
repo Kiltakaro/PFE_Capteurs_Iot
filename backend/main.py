@@ -1,27 +1,25 @@
-from flask import Flask, jsonify, request
+import paho.mqtt.client as mqtt
+import os, uuid, time, sys, logging, random, json, csv, datetime
+
+import pandas as pd
+import numpy as np
+
+from flask import Flask, jsonify, request, Blueprint
 from flask_cors import CORS
 from flask_sqlalchemy import SQLAlchemy
 from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity
 from werkzeug.security import check_password_hash, generate_password_hash
-from threading import Thread
-import os, uuid, time
-
-
-import paho.mqtt.client as mqtt
-import json
-import random
+from werkzeug.utils import secure_filename
 from apscheduler.schedulers.background import BackgroundScheduler
-import logging
-import pandas as pd
-import sys
+from threading import Thread 
+from scipy.interpolate import interp1d
+
+from models import db, User, SensorData, SensorHistory, SensorTemplate
+from users import users_bp
 
 
 logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
 logging.getLogger('apscheduler').setLevel(logging.DEBUG)
-
-
-
-from models import db, User, SensorData, SensorHistory
 
 time.sleep(5)
 
@@ -101,143 +99,6 @@ def hello_world():
     return "Hello world !"
 
 
-######################  ACCOUNTS #######################
-#####################  CRUD  USER  #####################
-@app.route('/api/users/create', methods=['POST'])
-def create_user():
-    """
-    Route pour créer un User dans la database
-    """
-    data = request.json
-    username = data.get('username')
-    password = data.get('password')
-    is_admin = data.get('is_admin', False)
-
-    if not username or not password:
-        return jsonify({"error": "Username and password are required"}), 400
-
-    # Vérification si le nom d'utilisateur existe déjà
-    if User.query.filter_by(username=username).first():
-        return jsonify({"error": "User already exists"}), 400
-
-    # Création de l'utilisateur
-    new_user = User(username=username, is_admin=is_admin)
-    new_user.set_password(password)
-    db.session.add(new_user)
-    db.session.commit()
-
-    return jsonify({"message": "User created successfully"}), 201
-
-
-# ROute a proteger je pense
-@app.route('/api/users', methods=['GET'])
-def read_users():
-    """
-    Route pour récupérer tous users
-    """
-    users = User.query.all()
-    return jsonify([{
-        "id": user.id,
-        "username": user.username,
-        "is_admin": user.is_admin
-    } for user in users]), 200
-
-
-# CELLE DU DESSUS CEST POUR TOUS LES USERS
-# CELLE DU DESSOUS C'EST POUR SEULEMENT CELUI QUI EST CONNECTE
-@app.route('/api/user', methods=['GET'])
-@jwt_required()
-def read_user():
-    """
-    Route pour récupérer l'utilisateur actuel 
-    """
-    current_user = get_jwt_identity()
-    user = User.query.filter_by(username=current_user).first()
-    if not user:
-        return jsonify({"msg": "User not found"}), 404
-    return jsonify({
-        "id": user.id,
-        "username": user.username,
-        "is_admin": user.is_admin
-    }), 200
-
-# Il faudra peut etre rajouter un cas ou c'est l'admin qui veut modifier
-# Route pour mettre à jour un utilisateur
-@app.route('/api/user', methods=['PUT'])
-@jwt_required()
-def update_user():
-    """
-    Route pour que l'utilisateur modifie ses données
-
-    Arguments attendus
-    username : nouveau nom de l'utilisateur
-    password : nouveau mot de passe de l'utilisateur
-    """
-    current_user = get_jwt_identity()
-    user = User.query.filter_by(username=current_user).first()
-    if not user:
-        return jsonify({"msg": "User not found"}), 404
-
-    data = request.json
-    username = data.get('username')
-    password = data.get('password')
-
-    if username:
-        user.username = username
-    if password:
-        user.set_password(password)
-
-    db.session.commit()
-    return jsonify({"message": "User updated successfully"}), 200
-
-
-
-
-# Ajouter sécurité
-@app.route('/api/users/<int:user_id>', methods=['DELETE'])
-def delete_user(user_id):
-    """
-    Route pour supprimer un utilisateur
-    
-    user_id : utilisateur à supprimer 
-    """
-    
-    user = db.session.get(User, user_id)
-    if not user:
-        return jsonify({"error": "User not found"}), 404
-
-    db.session.delete(user)
-    db.session.commit()
-    return jsonify({"message": "User deleted successfully"}), 200
-
-
-######################  LOGIN  #######################
-
-@app.route('/api/login', methods=['POST'])
-def login():
-    """
-    Route pour authentifier un utilisateur
-
-    Arguments attendus
-    username : nom de l'utilisateur
-    password : mdp de l'utilisateur
-    """
-    username = request.json.get('username', None)
-    password = request.json.get('password', None)
-
-    # Vérifier si l'utilisateur existe dans la base de données
-    user = User.query.filter_by(username=username).first()
-
-    if user and check_password_hash(user.password, password):
-        # Créer un token d'accès
-        token = create_access_token(identity=username)
-        token = str(token)
-        print(token)
-        return jsonify(token=token), 200
-
-    return jsonify({"msg": "Nom d'utilisateur ou mot de passe incorrect."}), 401
-
-
 ############################## SENSORS ###############################
 
 
@@ -298,7 +159,7 @@ def add_sensor():
     db.session.add(new_sensor)
     db.session.commit()
 
-    return jsonify({"message": "Capteur ajouté avec succès", "sensor": new_sensor.to_dict()}), 201
+    return jsonify({"message": "Capteur ajouté", "sensor": new_sensor.to_dict()}), 201
 
 
 @app.route('/api/sensors/<uuid:uid>', methods=['DELETE'])
@@ -313,13 +174,11 @@ def delete_sensor(uid):
         return jsonify({"error": "Capteur inconnu"}), 404
 
 
-    # Si le capteur est en pleine simulation, il faut l'arretée
-    job = scheduler.get_job(sensor_str_uid)
-    if job :
-        if old_period != sensor.period :
-            manage_sensor_job(sensor, "delete")
-            print(f"Job supprimé")
+    # Si le capteur est en pleine simulation, il faut l'arreter
+    manage_sensor_job(sensor, "delete")
 
+    # Delete sensor history
+    delete_sensor_history_function(uid)
 
     db.session.delete(sensor)
     db.session.commit()
@@ -354,8 +213,8 @@ def update_sensor(uid):
     if not sensor:
         return jsonify({"error": "Capteur inconnu"}), 404
 
-    # Pour la simulation
-    # old_sensor = sensor.period
+    # Pour la simulation en temps réel
+    old_period = sensor.period
 
     data = request.json
     sensor.name = data.get('name', sensor.name)
@@ -374,7 +233,7 @@ def update_sensor(uid):
     db.session.commit()
 
     # Si le capteur est en pleine simulation, il faut l'update si sa fréquence d'envoi change
-    job = scheduler.get_job(sensor_str_uid)
+    job = scheduler.get_job(uid)
     if job :
         if old_period != sensor.period :
             manage_sensor_job(sensor, "update")
@@ -385,55 +244,84 @@ def update_sensor(uid):
 
 
 
-    return jsonify({"message": "Capteur mis à jour avec succès", "sensor": sensor.to_dict()}), 200
+    return jsonify({"message": "Capteur mis à jour", "sensor": sensor.to_dict()}), 200
+
+@app.route('/api/templates', methods=['GET'])
+@jwt_required()
+def get_templates():
+    """
+    Route pour récupérer toutes les templates de capteurs
+    """
+    templates = SensorTemplate.query.all()
+    return jsonify([{
+        "id": template.id,
+        "name": template.name,
+        "description": template.description,
+        "unit": template.unit,
+        "min_value": template.min_value,
+        "max_value": template.max_value,
+        "delta_value": template.delta_value,
+        "period": template.period,
+        "min_period": template.min_period,
+        "max_period": template.max_period,
+        "read_only": template.read_only
+    } for template in templates]), 200
+
+@app.route('/api/templates', methods=['POST'])
+@jwt_required()
+def create_template():
+    """
+    Route pour créer une template
+    """
+    data = request.json
+    name = data.get('name')
+    description = data.get('description')
+    unit = data.get('unit')
+    min_value = data.get('min_value')
+    max_value = data.get('max_value')
+    delta_value = data.get('delta_value')
+    period = data.get('period')
+    min_period = data.get('min_period')
+    max_period = data.get('max_period')
+    read_only = data.get('read_only', False)
+
+    # Vérifie si un modèle avec le même nom existe
+    if SensorTemplate.query.filter_by(name=name).first():
+        return jsonify({"error": "Template name already exists"}), 400
+
+    new_template = SensorTemplate(
+        name=name,
+        description=description,
+        unit=unit,
+        min_value=min_value,
+        max_value=max_value,
+        delta_value=delta_value,
+        period=period,
+        min_period=min_period,
+        max_period=max_period,
+        read_only=read_only
+    )
+    db.session.add(new_template)
+    db.session.commit()
+
+    return jsonify({"message": "Template created successfully"}), 201
+
+@app.route('/api/templates/<int:template_id>', methods=['DELETE'])
+@jwt_required()
+def delete_template(template_id):
+    """
+    Route pour supprimer une template
+    """
+    template = db.session.get(SensorTemplate, template_id)
+    if not template:
+        return jsonify({"error": "Template not found"}), 404
+
+    db.session.delete(template)
+    db.session.commit()
+    return jsonify({"message": "Template deleted successfully"}), 200
 
 
-########################## A FINIR ################
-######################### MQTT ####################
-# Création de la base de données (au démarrage uniquement pour dev)
-
-########## MQTT 
-# Connexion + Publish + Subscribe
-
-# Configuration du broker MQTT
-MQTT_BROKER = "mosquitto"  # Nom du container docker
-MQTT_PORT = 1883
-MQTT_TOPIC = "#" # Tous les topics
-
-def on_connect(client, userdata, flags, rc):
-    print(f"PARFAIT Connecté au broker MQTT avec le code {rc}")
-    client.subscribe(MQTT_TOPIC)
-
-
-# pour verifier 
-# curl http://localhost:5000/api/sensors/history
-def on_message(client, userdata, msg):
-    payload = msg.payload.decode()
-    print(f"YOUPIIIIIII Message reçu sur {msg.topic}: {payload}")
-
-    try:
-        data = json.loads(payload)
-        print(payload)
-        print(data)
-
-        sensor_uid = data["sensor_uid"]
-        value = data["value"]
-
-        with app.app_context():
-            sensor = SensorData.query.filter_by(uid=sensor_uid).first()
-            if sensor:
-                history_entry = SensorHistory(sensor_uid=sensor_uid, value=value)
-                db.session.add(history_entry)
-                db.session.commit()
-                print(f"Ajout en historique du capteur {sensor_uid}: {value} {sensor.unit}")
-            else:
-                print(f"Aucun capteur trouvé avec l'UID {sensor_uid}")
-
-    except Exception as e:
-        print(f"Erreur lors du traitement du message MQTT: {e}")
-
-
-######################## DONNEES SIMULEES ####################
+######################## STOCKAGE DONNEES SIMULEES ############################
 
 # curl http://localhost:5000/api/sensors/history
 @app.route('/api/sensors/history', methods=['GET'])
@@ -455,7 +343,7 @@ def get_sensor_history(sensor_uid):
     try:
         history = SensorHistory.query.filter_by(sensor_uid=sensor_uid).order_by(SensorHistory.timestamp.desc()).all()
         if not history:
-            return jsonify({"message": "Aucune donnée historique trouvée pour ce capteur"}), 404
+            return jsonify({"message": "Aucun historique trouvé pour ce capteur"}), 404
 
         history_data = [
             {
@@ -477,21 +365,323 @@ def delete_sensor_history(sensor_uid):
 
     sensor_uid : uid du capteur
     """
+    response, status_code = delete_sensor_history_function(sensor_uid)
+    return jsonify(response), status_code
+
+
+def delete_sensor_history_function(sensor_uid):
+    """
+    Fonction pour supprimer l'historique d'un capteur
+
+    sensor_id : uid du capteur
+    """
     try:
         history = SensorHistory.query.filter_by(sensor_uid=sensor_uid).all()
         if not history:
-            return jsonify({"message": "Aucune donnée historique trouvée pour ce capteur"}), 404
+            return {"message": "Aucun historique trouvé pour ce capteur"}, 404
 
         for entry in history:
             db.session.delete(entry)
         db.session.commit()
 
-        return jsonify({"message": "Toutes les données historiques ont été supprimées pour ce capteur"}), 200
+        return {"message": "Historique supprimé pour ce capteur"}, 200
 
     except Exception as e:
-        return jsonify({"error": f"Erreur lors de la suppression de l'historique: {e}"}), 500
+        return {"error": f"Erreur lors de la suppression de l'historique: {e}"}, 500
 
-################## MQTT ####################
+########################## SIMULATION GENERATION TEMPS REEL ############################
+
+# A modifier pour mettre un SensorData en parametre
+def generate_sensor_data(sensor : SensorData):
+    """
+    Simule la génération en temps REEL de données pour un capteur spécifique
+
+    sensor : le capteur à simuler 
+    """
+    sensor_str_uid = str(sensor.uid)
+    with app.app_context():
+        # on mettra surement un delta la dedans 
+        value = random.uniform(sensor.min_value, sensor.max_value)  # Valeur aléatoire entre min et max
+        payload = {
+            "sensor_uid": sensor_str_uid, # l'uid ne se convertit pas automatiquement en string
+            "value": value,
+            "timestamp": datetime.datetime.now().isoformat(),
+        }
+        print(f"Envoi MQTT vers Topic: {sensor_str_uid}/datastore, Message: {json.dumps(payload)}")  # Debug
+        mqtt_client.publish(f"{sensor_str_uid}/datastore", json.dumps(payload))  # Publie sur le topic du capteur
+
+########################## SIMULATION GENERATION RAPIDE ############################
+
+@app.route('/api/sensors/simulate/<uuid:sensor_id>', methods=['GET'])
+def simulate_sensor(sensor_id):
+    """
+    Route pour simuler très rapidement un capteur spécifique
+
+    sensor_id : uid du capteur
+    """
+    sensor_str_uid = str(sensor_id)
+    sensor = SensorData.query.filter_by(uid=sensor_id).first()
+    if not sensor:
+        return jsonify({"error": "Capteur inconnu"}), 404
+
+
+    duration = int(request.args.get('duration', 24))  # Durée en heures
+    interval = int(request.args.get('interval', 10))  # Intervalle en minutes
+
+    start_time = datetime.datetime.now() - datetime.timedelta(hours=duration)
+    num_points = (duration * 60) // interval  # Nombre total de points générés
+
+    for i in range(num_points):
+        timestamp = start_time + datetime.timedelta(minutes=i * interval)
+        value = round(random.uniform(sensor.min_value, sensor.max_value), 2)  # Génération a modifier
+
+        payload = {
+            "sensor_uid": sensor_str_uid,
+            "timestamp": timestamp.isoformat(),
+            "value": value
+        }
+
+        print(f"Envoi MQTT vers Topic: {sensor_str_uid}/datastore, Message: {json.dumps(payload)}")  # Debug
+        mqtt_client.publish(f"{sensor_str_uid}/datastore", json.dumps(payload))
+        time.sleep(0.1)  # Petit délai pour éviter de spammer MQTT trop vite
+
+    return jsonify({"message": f"Simulation envoyée via MQTT pour capteur {sensor_id}"}), 200
+
+
+########################### GENERER COURBES AVEC POINTS DONNES ############################
+
+@app.route('/api/sensors/generate-curve', methods=['POST'])
+def generate_curve():
+    """
+    Génére une courbe en fonction des points données
+
+    Arguments attendus :
+    sensor_uid : uid du capteur
+    points : liste de points (x, y) pour l'interpolation
+    """
+    data = request.json
+    print("Received data:", data)  # Log les données reçues
+    sensor_uid = data.get("sensor_uid")
+
+    if not data:
+        return jsonify({"error": "Requête vide ou format JSON invalide"}), 400
+
+    user_points = data.get("points", [])
+    duration = 24
+    interval = 10
+
+    if len(user_points) < 2:
+        return jsonify({"error": "Au moins 2 points sont nécessaires"}), 400
+
+    try:
+        timestamps = [datetime.datetime.utcnow() + datetime.timedelta(hours=p["x"]) for p in user_points]
+        values = [float(p["y"]) for p in user_points]
+        print("Timestamps:", timestamps)
+        print("Values:", values)
+    except KeyError as e:
+        return jsonify({"error": f"Clé manquante dans les points : {e}"}), 400
+    except ValueError as e:
+        return jsonify({"error": f"Format invalide des valeurs : {e}"}), 400
+    except Exception as e:
+        print("Erreur lors du traitement des points:", e)
+        return jsonify({"error": f"Erreur inattendue : {e}"}), 500
+
+    # Générer une interpolation
+    try:
+        x_numeric = np.linspace(0, len(timestamps) - 1, num=(duration * 60) // interval)
+        interpolator = interp1d(range(len(timestamps)), values, kind='linear')
+        y_generated = interpolator(x_numeric)
+    except Exception as e:
+        print("Erreur d'interpolation:", e)
+        return jsonify({"error": f"Erreur d'interpolation : {e}"}), 500
+
+    start_time = timestamps[0]
+
+    for i in range(len(y_generated)):
+        timestamp = start_time + datetime.timedelta(minutes=i * interval)
+        value = float(y_generated[i])
+
+        # Publier les données générées sur MQTT
+        payload = {
+            "sensor_uid": str(sensor_uid),
+            "timestamp": timestamp.isoformat(),
+            "value": value
+        }
+        print(f"Envoi MQTT vers Topic: {sensor_uid}/datastore, Message: {json.dumps(payload)}")  # Debug
+        mqtt_client.publish(f"{sensor_uid}/datastore", json.dumps(payload))
+        time.sleep(0.1)  # Petit délai pour éviter de spammer MQTT trop vite
+
+    return jsonify({"message": f"Simulation envoyée via MQTT pour capteur {sensor_uid}"}), 200
+
+######################################### IMPORT CSV ########################################
+
+bp = Blueprint('csv_upload', __name__)
+
+UPLOAD_FOLDER = "uploads"
+ALLOWED_EXTENSIONS = {"csv"}
+
+# Vérifier l'extension du fichier
+def allowed_file(filename):
+    return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
+
+@bp.route("/api/sensors/upload-csv/<uuid:sensor_id>", methods=["POST"])
+def upload_csv(sensor_id):
+    """
+    Route pour importer les données simulées / réelles d'un capteur à partir d'un fichier CSV
+    Le but est de lire le CSV pour inserer ses données dans la base de données sans sauvegarder le fichier
+
+    sensor_id : uid du capteur
+    """
+    if "file" not in request.files:
+        return jsonify({"error": "Aucun fichier envoyé"}), 400
+
+    file = request.files["file"]
+
+    if file.filename == "":
+        return jsonify({"error": "Nom de fichier invalide"}), 400
+
+    if not allowed_file(file.filename):
+        return jsonify({"error": "Format de fichier non autorisé"}), 400
+
+    try:
+        file.stream.seek(0)  # Mettre le poiteur au début du fichier
+        reader = csv.reader(file.stream.read().decode("utf-8").splitlines()) # Découpage
+        next(reader)  # Sauter l'en-tête
+
+        entries = []
+        for row in reader:
+            if len(row) != 2:
+                continue  # Ignore qui n'ont pas le format attendu
+            
+            value, timestamp = row
+            try:
+                value = float(value)
+                timestamp = datetime.datetime.strptime(timestamp, "%Y-%m-%d %H:%M:%S")
+            except ValueError as ve:
+                continue  # Ignore les lignes qui posent probleme
+
+            entries.append(SensorHistory(sensor_uid=sensor_id, value=value, timestamp=timestamp))
+
+        # Insértion dans la base de données
+        db.session.bulk_save_objects(entries)
+        db.session.commit()
+
+        return jsonify({"message": "Données insérées avec succès"}), 201
+
+    except Exception as e:
+        db.session.rollback()
+        print(f"Erreur lors de l'import: {e}")
+        return jsonify({"error": f"Erreur lors de l'import : {str(e)}"}), 500
+
+app.register_blueprint(bp)
+app.register_blueprint(users_bp)
+
+
+######################### MQTT ####################
+
+########## MQTT 
+# Connexion + Publish + Subscribe
+
+# Configuration du broker MQTT
+MQTT_BROKER = "mosquitto"  # Nom du container docker
+MQTT_PORT = 1883
+MQTT_TOPIC = "#" # Tous les topics
+
+def on_connect(client, userdata, flags, rc):
+    print(f"PARFAIT Connecté au broker MQTT avec le code {rc}")
+    client.subscribe(MQTT_TOPIC)
+
+
+
+# Pour lire les messages du MQTT et les traiter
+def on_message(client, userdata, msg):
+    payload = msg.payload.decode()
+    print(f"Message reçu sur {msg.topic}: {payload}")
+
+    try:
+        data = json.loads(payload)
+
+        # Cas enregistrement de capteur
+        if msg.topic == "system/register":
+            sensor_uid = data.get("uid")
+            with app.app_context():
+                existing_sensor = SensorData.query.filter_by(uid=sensor_uid).first()
+                
+                if existing_sensor:
+                    print(f"Le capteur {sensor_uid} existe déjà")
+                    return
+        
+                else:            
+                    print(f"Le capteur error ?")
+                    description=data.get("description")
+                    # AJOUTER VERIF SI UNITE RFC8789 ?
+                    unit=data.get("unit") 
+                    min_value=data.get("min_value")
+                    max_value=data.get("max_value")
+                    delta_value=data.get("delta_value")
+                    period=data.get("period")
+                    min_period=data.get("min_period")
+                    max_period=data.get("max_period")
+
+                    read_only=data.get("read_only")
+                    if read_only.lower() == "true":
+                        read_only = True
+                    else:
+                        read_only = False
+
+                    value=data.get("value")
+
+
+                    new_sensor = SensorData(
+                        uid=uuid.UUID(sensor_uid),
+                        name=str(sensor_uid),
+                        description=description,
+                        unit=unit,
+                        min_value=min_value,
+                        max_value=max_value,
+                        delta_value=delta_value,
+                        period=period,
+                        min_period=min_period,
+                        max_period=max_period,
+                        read_only=read_only,
+                        value=value
+                    )
+                    print(f"Le capteur error 2")
+                    db.session.add(new_sensor)
+                    print(f"Le capteur error 3")
+                    db.session.commit()
+                    print(f"Capteur {sensor_uid} ajouté")
+                    db.session.close()
+                    return
+
+        # Cas reception de données
+        else:
+            sensor_uid = data.get("sensor_uid")
+            timestamp = data.get("timestamp")
+            value = data.get("value")  # Peut être None si ce n'est pas une valeur de capteur
+
+            with app.app_context():
+                sensor = SensorData.query.filter_by(uid=sensor_uid).first()
+                print(f"Capteur {str(sensor.uid)} trouvé")
+                # Cas capteur connu
+                if sensor:
+                    print(f"Capteur connu ({sensor_uid})")
+                    history_entry = SensorHistory(sensor_uid=sensor_uid, value=value, timestamp=timestamp)
+                    db.session.add(history_entry)
+                    db.session.commit()
+                    print(f"Ajout dans l'historique du capteur {sensor_uid}: {value} {sensor.unit}")
+
+                # Cas capteur inconnu => demande d'enregistrement
+                else:
+                    print(f"Capteur inconnu ({sensor_uid}), demande d'enregistrement")
+                    command_topic = f"{sensor_uid}/command"
+                    mqtt_client.publish(command_topic, json.dumps({"command": "REGISTER"}))
+                    print(f"Message REGISTER envoyé sur {command_topic}")
+
+    except Exception as e:
+        print(f"Erreur lors du traitement du message MQTT: {e}")
+
+
 
 # Création du client MQTT
 mqtt_client = mqtt.Client()
@@ -517,6 +707,9 @@ def publish_mqtt():
 
 @app.route('/api/mqtt/config', methods=['POST'])
 def update_mqtt_config():
+    """
+    Route pour configurer la connexion au broker depuis le front
+    """
     global MQTT_BROKER, MQTT_PORT, MQTT_TOPIC, mqtt_client
 
     data = request.json
@@ -533,30 +726,6 @@ def update_mqtt_config():
     mqtt_client.loop_start()
 
     return jsonify({"message": "Configuration MQTT mise à jour"}), 200
-
-################## SIMULATION CAPTEURS #######################
-
-
-# A modifier pour mettre un SensorData en parametre
-def generate_sensor_data(sensor : SensorData):
-    """
-    Simule la génération de données pour un capteur spécifique
-
-    sensor : le capteur à simuler 
-    """
-    sensor_str_uid = str(sensor.uid)
-    with app.app_context():
-        # on mettra surement un delta la dedans 
-        value = random.uniform(sensor.min_value, sensor.max_value)  # Valeur aléatoire entre min et max
-        payload = {
-            "sensor_uid": sensor_str_uid, # l'uid ne se convertit pas automatiquement en string
-            "name": sensor.name,
-            "value": value,
-            "unit": sensor.unit
-        }
-        print(f"Envoi MQTT vers Topic: {sensor_str_uid}/datastore, Message: {json.dumps(payload)}")  # Debug
-        mqtt_client.publish(f"{sensor_str_uid}/datastore", json.dumps(payload))  # Publie sur le topic du capteur
-        print(f"Envoi MQTT Confirmed")  # Debug
 
 
 ########## Scheduler
@@ -669,11 +838,7 @@ def manage_sensor_job(sensor: SensorData, action: str):
 
 
 
-# DECOMMENTER POUR TESTER LENVOI DANS LE MQTT
-# schedule_existing_sensors()
 scheduler.start()
-
-
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)

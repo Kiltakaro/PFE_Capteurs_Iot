@@ -65,3 +65,18 @@ class SensorHistory(db.Model):
             'value': self.value,
             'timestamp': self.timestamp
         }
+    
+
+class SensorTemplate(db.Model):
+    __tablename__ = 'sensor_templates'
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), unique=True, nullable=False)
+    description = db.Column(db.String(255), nullable=True)
+    unit = db.Column(db.String(10), nullable=False)
+    min_value = db.Column(db.Float, nullable=False)
+    max_value = db.Column(db.Float, nullable=False)
+    delta_value = db.Column(db.Float, default=1)
+    period = db.Column(db.Integer, nullable=False)
+    min_period = db.Column(db.Integer, default=60)
+    max_period = db.Column(db.Integer, default=3600)
+    read_only = db.Column(db.Boolean, default=False)

@@ -17,7 +17,7 @@
         <p><strong>Unité:</strong> {{ sensor.unit }}</p>
         <p><strong>Fréquence:</strong> {{ sensor.period }} s</p>
         <div class="mt-4">
-          <router-link :to="{ name: 'EditSensor', params: { id: sensor.uid } }">
+          <router-link :to="{ name: 'SensorEdit', params: { id: sensor.uid } }">
             <button class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-700 transition">Modifier</button>
           </router-link>
           <button @click="confirmDelete(sensor.uid)" class="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-700 transition ml-2">Supprimer</button>

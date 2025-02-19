@@ -1,5 +1,4 @@
-# Passer a node 20 ou 22 plus tard
-FROM node:18
+FROM node:22
 
 WORKDIR /frontend
 
@@ -8,14 +7,10 @@ COPY package*.json ./
 
 # Installer les dépendances
 RUN npm install
-RUN npm install vue-router
-RUN npm install -D tailwindcss@3 postcss autoprefixer
-RUN npm install @canvasjs/vue-charts
-RUN npm install chart.js vue-chartjs
 
-# RUN npm install chart.js vue-chart-3
-# RUN npm install mqtt --save
-# RUN npm install paho-mqtt
+# RUN npm install vue-router
+# RUN npm install -D tailwindcss@3 postcss autoprefixer
+# RUN npm install @canvasjs/vue-charts
 
 COPY . .
 

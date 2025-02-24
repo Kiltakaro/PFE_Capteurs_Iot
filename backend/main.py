@@ -125,10 +125,14 @@ def add_sensor():
     min_value : Valeur minimale pour la simulation
     max_value : Valeur maximale pour la simulation
     period : Fréquence d'envoi de données lors de la simulation
-    ??min_period 
-    ??max_period
-    ??read_only
-    ??value
+    --- Optionnels --- 
+    Il ne servent a rien dans les calculs mais sont la pour assurer 
+    la compatabilité avec les capteurs réels avec des capteurs réels
+    ------------------
+    min_period = Valeur minimale pour la fréquence d'envoi
+    max_period = Valeur maximale pour la fréquence d'envoi
+    read_only = Capteur en lecture seule
+    value = Valeur initiale du capteur
     """
     data = request.json
     name = data.get('name')
@@ -227,7 +231,6 @@ def update_sensor(uid):
     sensor.min_period = data.get('min_period', sensor.min_period)
     sensor.max_period = data.get('max_period', sensor.max_period)
     sensor.read_only = data.get('read_only', sensor.read_only)
-    # JEN DOUTE FORT
     sensor.value = data.get('value', sensor.value)
 
     db.session.commit()
@@ -243,8 +246,8 @@ def update_sensor(uid):
     print(f"Capteur {sensor.name} mis à jour (période : {sensor.period}s)")
 
 
-
     return jsonify({"message": "Capteur mis à jour", "sensor": sensor.to_dict()}), 200
+
 
 @app.route('/api/templates', methods=['GET'])
 @jwt_required()

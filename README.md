@@ -136,6 +136,11 @@ services:
       - app-network  # Connecte le conteneur au réseau Docker nommé "app-network"
 ```
 
+### Script de tests
+
+A la fin du docker compose il y a beaucoup de commentaires. C'est la base de données de tests à utiliser pour lancer les tests pytest. Il suffit de décommenter le volume db_test_data son conteneur puis de lancer : ```docker-compose run --rm backend sh -c "PYTHONPATH=/backend pytest"```
+
+
 
 ## Contributeurs
 - Kiltakaro GRANDJEAN

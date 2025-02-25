@@ -17,40 +17,19 @@ from scipy.interpolate import interp1d
 from models import db, User, SensorData, SensorHistory, SensorTemplate
 from users import users_bp
 
-
-logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
-logging.getLogger('apscheduler').setLevel(logging.DEBUG)
-
-time.sleep(5)
-
-app = Flask(__name__)
-
-# Configuration CORS
-
-origins = [
-    "http://localhost",
-    "http://localhost:8080",
-    "http://127.0.0.1:5000",
-    "http://frontend",
-    "http://frontend:8080",
-    "http://frontend:5000",
-    "http://backend",
-    "http://backend:8080",
-    "http://backend:5000",
-    "null"
-]
-
-CORS(app, resources={r"/api/*": {"origins": "*"}}, supports_credentials=True)
-
-# CORS(app, resources={r"/*": {"origins": origins}}, supports_credentials=True)
-
-
 ######################### BASE DE DONNES  ########################
 
 # Configuration de la base de données
+
+# Pour les tests :
+# app.config["TESTING"] = True
+# app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://user:password@database_test:5432/testDb'
+
+# Pour la production :
 app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://user:password@database:5432/sensorDb'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
+#########
 
 # Ajoute un admin si aucun n'existe
 def create_default_admin():
@@ -91,7 +70,37 @@ app.config["JWT_SECRET_KEY"] = "super-secret-key"  # À changer avec une vraie c
 jwt = JWTManager(app)
 
 
-######################################################
+########################## Config Cors ###########################
+
+logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
+logging.getLogger('apscheduler').setLevel(logging.DEBUG)
+
+time.sleep(5)
+
+app = Flask(__name__)
+
+# Configuration CORS
+
+origins = [
+    "http://localhost",
+    "http://localhost:8080",
+    "http://127.0.0.1:5000",
+    "http://frontend",
+    "http://frontend:8080",
+    "http://frontend:5000",
+    "http://backend",
+    "http://backend:8080",
+    "http://backend:5000",
+    "null"
+]
+
+CORS(app, resources={r"/api/*": {"origins": "*"}}, supports_credentials=True)
+
+# CORS(app, resources={r"/*": {"origins": origins}}, supports_credentials=True)
+
+
+######################### ENDPOINTS #############################
+
 
 
 @app.route('/hello_world')
@@ -103,6 +112,7 @@ def hello_world():
 
 
 @app.route('/api/sensors', methods=['GET'])
+@jwt_required()
 def get_sensors():
     """
     Route pour récupérer les capteurs
@@ -114,6 +124,7 @@ def get_sensors():
 
 # REFAIRE LES SSENSORS APRES
 @app.route('/api/sensors', methods=['POST'])
+@jwt_required()
 def add_sensor():
     """
     Route pour ajouter un capteur
@@ -167,6 +178,7 @@ def add_sensor():
 
 
 @app.route('/api/sensors/<uuid:uid>', methods=['DELETE'])
+@jwt_required()
 def delete_sensor(uid):
     """
     Route pour supprimer un capteur
@@ -191,6 +203,7 @@ def delete_sensor(uid):
 
 
 @app.route('/api/sensors/<uuid:uid>', methods=['GET'])
+@jwt_required()
 def get_sensor(uid):
     """
     Route pour récupérer le capteur spécifique
@@ -206,6 +219,7 @@ def get_sensor(uid):
 
 # on ne modifie peut etre pas la valeur etc, je sais pas comment on simule les capteurs
 @app.route('/api/sensors/<uuid:uid>', methods=['PUT'])
+@jwt_required()
 def update_sensor(uid):
     """
     Route pour modifier un capteur
@@ -237,10 +251,9 @@ def update_sensor(uid):
 
     # Si le capteur est en pleine simulation, il faut l'update si sa fréquence d'envoi change
     job = scheduler.get_job(uid)
-    if job :
-        if old_period != sensor.period :
-            manage_sensor_job(sensor, "update")
-            print(f"Job mis à jour")
+    if old_period != sensor.period :
+        manage_sensor_job(sensor, "update")
+        print(f"Job mis à jour")
 
 
     print(f"Capteur {sensor.name} mis à jour (période : {sensor.period}s)")

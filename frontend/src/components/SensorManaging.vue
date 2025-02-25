@@ -61,7 +61,9 @@ export default {
   methods: {
     async fetchSensors() {
       try {
-        const response = await axios.get(`http://${ip}:5000/api/sensors`);
+        const response = await axios.get(`http://${ip}:5000/api/sensors`, {
+            headers: { Authorization: `Bearer ${localStorage.getItem("token")}` }
+          });
         this.sensors = response.data;
       } catch (error) {
         console.error("Erreur lors de la récupération des capteurs :", error);
@@ -77,7 +79,9 @@ export default {
 
     async deleteSensor(uid) {
       try {
-        await axios.delete(`http://${ip}:5000/api/sensors/${uid}`);
+        await axios.delete(`http://${ip}:5000/api/sensors/${uid}`, {
+            headers: { Authorization: `Bearer ${localStorage.getItem("token")}` }
+          });
         this.fetchSensors(); // Rafraîchir la liste des capteurs après la suppression
       } catch (error) {
         console.error("Erreur lors de la suppression du capteur :", error);

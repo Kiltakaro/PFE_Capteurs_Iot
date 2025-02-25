@@ -176,7 +176,9 @@ export default {
     async fetchSensorHistory() {
       try {
         console.log("Récupération de l'historique du capteur...");
-        const response = await axios.get(`http://localhost:5000/api/sensors/history/${this.sensorId}`);
+        const response = await axios.get(`http://localhost:5000/api/sensors/history/${this.sensorId}`, {
+            headers: { Authorization: `Bearer ${localStorage.getItem("token")}` }
+          });
         const history = response.data.history;
         console.log("Historique récupéré :", history);
 
@@ -201,7 +203,9 @@ export default {
     // verifie si un job run dejà pour ce capteur (simulation)
     async checkJobStatus() {
       try {
-        const response = await axios.get(`http://localhost:5000/api/sensors/job/${this.sensorId}/status`);
+        const response = await axios.get(`http://localhost:5000/api/sensors/job/${this.sensorId}/status`, {
+            headers: { Authorization: `Bearer ${localStorage.getItem("token")}` }
+          });
         this.jobRunning = response.data.running;
         if (this.jobRunning) {
           this.fetchSensorPeriod();
@@ -215,7 +219,9 @@ export default {
     async toggleJob() {
       try {
         const action = this.jobRunning ? 'stop' : 'start';
-        await axios.post(`http://localhost:5000/api/sensors/job/${this.sensorId}/${action}`);
+        await axios.post(`http://localhost:5000/api/sensors/job/${this.sensorId}/${action}`, {
+            headers: { Authorization: `Bearer ${localStorage.getItem("token")}` }
+          });
         this.jobRunning = !this.jobRunning;
 
         if (this.jobRunning) {
@@ -250,7 +256,9 @@ export default {
     // Fetch sensor period
     async fetchSensorPeriod() {
       try {
-        const response = await axios.get(`http://localhost:5000/api/sensors/${this.sensorId}`);
+        const response = await axios.get(`http://localhost:5000/api/sensors/${this.sensorId}`, {
+            headers: { Authorization: `Bearer ${localStorage.getItem("token")}` }
+          });
         this.period = response.data.period;
       } catch (error) {
         console.error("Erreur lors de la récupération de la période du capteur :", error);
@@ -260,7 +268,9 @@ export default {
     // Supprime l'historique du capteur
     async deleteSensorHistory() {
       try {
-        const response = await axios.delete(`http://localhost:5000/api/sensors/history/${this.sensorId}`);
+        const response = await axios.delete(`http://localhost:5000/api/sensors/history/${this.sensorId}`, {
+            headers: { Authorization: `Bearer ${localStorage.getItem("token")}` }
+          });
         alert(response.data.message);
         this.fetchSensorHistory(); // Rafraîchit l'historique après suppression
       } catch (error) {
@@ -282,8 +292,10 @@ export default {
       try {
         console.log(`Simulation de ${this.selectedDuration}h avec un intervalle de ${this.selectedInterval} min`);
 
+
         // Fait la simulation
         await axios.get(`http://localhost:5000/api/sensors/simulate/${this.sensorId}`, {
+          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
           params: {
             duration: this.selectedDuration,
             interval: this.selectedInterval
@@ -296,7 +308,9 @@ export default {
         await new Promise(resolve => setTimeout(resolve, 4000));  // Attente de 4 secondes
 
         // Récupère l'historique depuis la base de données
-        const response = await axios.get(`http://localhost:5000/api/sensors/history/${this.sensorId}`);
+        const response = await axios.get(`http://localhost:5000/api/sensors/history/${this.sensorId}`, {
+            headers: { Authorization: `Bearer ${localStorage.getItem("token")}` }
+          });
         const history = response.data.history;
 
         if (history.length > 0) {

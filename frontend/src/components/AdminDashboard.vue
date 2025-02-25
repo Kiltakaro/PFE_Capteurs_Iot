@@ -68,19 +68,25 @@ export default {
     };
   },
   methods: {
+
     // Charger les utilisateurs
     async fetchUsers() {
       try {
-        const response = await axios.get(`http://${ip}:5000/api/users`);
+        const response = await axios.get(`http://${ip}:5000/api/users`, {
+            headers: { Authorization: `Bearer ${localStorage.getItem("token")}` }
+          });
         this.users = response.data;
       } catch (error) {
         console.error('Erreur lors de la récupération des utilisateurs:', error);
       }
     },
+
     // Créer un nouvel utilisateur
     async createUser() {
       try {
-        const response = await axios.post(`http://${ip}:5000/api/users/create`, this.newUser);
+        const response = await axios.post(`http://${ip}:5000/api/users/create`, this.newUser, {
+            headers: { Authorization: `Bearer ${localStorage.getItem("token")}` }
+          });
         alert(response.data.message);
         this.fetchUsers(); // Rafraîchir la liste
         this.newUser = { username: '', password: '', is_admin: false }; // Réinitialiser le formulaire
@@ -88,11 +94,14 @@ export default {
         console.error('Erreur lors de la création de l’utilisateur:', error);
       }
     },
+    
     // Supprimer un utilisateur
     async deleteUser(userId) {
       if (!confirm("Êtes-vous sûr de vouloir supprimer cet utilisateur ?")) return;
       try {
-        const response = await axios.delete(`http://${ip}:5000/api/users/${userId}`);
+        const response = await axios.delete(`http://${ip}:5000/api/users/${userId}`, {
+            headers: { Authorization: `Bearer ${localStorage.getItem("token")}` }
+          });
         alert(response.data.message);
         this.fetchUsers(); // Rafraîchir la liste 
       } catch (error) {
@@ -100,7 +109,6 @@ export default {
         alert(error.response?.data?.error || 'Erreur lors de la suppression');
       }
     },
-    // On pourra rajouter la modification d'un utilisateur plus tard is on crée des userrs plus complexe : ex Email etc
   },
   mounted() {
     this.fetchUsers(); // Charger les utilisateurs à l’ouverture

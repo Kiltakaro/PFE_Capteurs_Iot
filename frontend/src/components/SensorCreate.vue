@@ -127,7 +127,9 @@ export default {
       }
 
       try {
-        const response = await axios.post(`http://${ip}:5000/api/sensors`, this.newSensor);
+        const response = await axios.post(`http://${ip}:5000/api/sensors`, this.newSensor, {
+            headers: { Authorization: `Bearer ${localStorage.getItem("token")}` }
+          });
         console.log(response.data.message);
         this.alertMessage = "Capteur ajouté avec succès.";
         this.newSensor = {

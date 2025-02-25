@@ -29,7 +29,7 @@
 <script>
 import axios from "axios";
 
-const ip = 'localhost'; // Remplacez 'backend' par localhost si tests sans docker
+const ip = 'localhost'; // Ip a modifier si déploiement autre que local
 
 
 import NavBar from './NavBar.vue';
@@ -56,9 +56,7 @@ export default {
       try {
         const response = await axios.post(`http://${ip}:5000/api/login`, this.credentials);
         localStorage.setItem("token", response.data.token); // Sauvegarde du token JWT dans le localStorage
-        console.log(response.data);
-        console.log(response)
-        console.log("Connecté avec succès Token : ", response.data.token);
+
         this.$router.push("/"); // Redirige vers la page d'accueil après la connexion
       } catch (error) {
         console.error("Erreur lors de la connexion :", error);

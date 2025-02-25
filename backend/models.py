@@ -1,6 +1,7 @@
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash
 import uuid
+from sqlalchemy.types import TypeDecorator, String
 
 db = SQLAlchemy()
 
@@ -15,10 +16,31 @@ class User(db.Model):
         """Hash et stocke le mot de passe."""
         self.password = generate_password_hash(password)
 
+class StringUUID(TypeDecorator):
+    """
+    Convertit un UUID en string pour PostgreSQL
+    """
+    impl = String(100)
+
+    cache_ok = True
+
+    def process_bind_param(self, value, dialect):
+        if value is None:
+            return None
+        if isinstance(value, uuid.UUID):
+            return str(value)
+        return value
+
+    def process_result_value(self, value, dialect):
+        if value is None:
+            return None
+        return str(value)
+
 
 class SensorData(db.Model):
     __tablename__ = 'sensor_data'
-    uid = db.Column(db.String(100), primary_key=True, default=lambda: str(uuid.uuid4()))
+    uid = db.Column(StringUUID, primary_key=True, default=lambda: str(uuid.uuid4()))
+    # uid = db.Column(db.String(100), primary_key=True, default=lambda: str(uuid.uuid4()))
     name = db.Column(db.String(100), nullable=False)
     unit = db.Column(db.String(10), nullable=False)
     description = db.Column(db.String(255), nullable=True)
@@ -53,7 +75,7 @@ class SensorData(db.Model):
 class SensorHistory(db.Model):
     __tablename__ = 'sensor_history'
     id = db.Column(db.Integer, primary_key=True)
-    sensor_uid = db.Column(db.String(100), db.ForeignKey('sensor_data.uid'), nullable=False)
+    sensor_uid = db.Column(StringUUID, db.ForeignKey('sensor_data.uid'), nullable=False)
     value = db.Column(db.Float, nullable=False)
     timestamp = db.Column(db.DateTime, nullable=False, default=db.func.current_timestamp())
     sensor = db.relationship('SensorData', backref=db.backref('history', lazy=True))

@@ -7,14 +7,16 @@ from models import User
 from werkzeug.security import generate_password_hash
 
 # Pour lancer les tests : 
-# docker-compose run --rm backend sh -c "PYTHONPATH=/backend pytest"
-
+# docker-compose run --rm backend sh -c "PYTHONPATH=/backend pytest -s"
 
 @pytest.fixture
 def client():
-    """Crée un client de test Flask avec une base de données isolée."""
+    """
+    Crée un client de test Flask avec une base de données isolée.
+    """
     app.config["TESTING"] = True
-    app.config["SQLALCHEMY_DATABASE_URI"] = "postgresql://user:password@database_test:5432/testDb"
+    app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://user:password@database:5432/sensorDb'
+    print(f"URI de la base de données : {app.config['SQLALCHEMY_DATABASE_URI']}")
 
     with app.app_context():
         db.create_all()

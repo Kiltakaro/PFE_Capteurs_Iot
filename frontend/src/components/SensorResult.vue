@@ -105,13 +105,18 @@
     <!-- Import CSV -->
     <div v-if="selectedSimulation === 'importCsv'" class="bg-white shadow-md rounded p-4">
       <h3 class="text-xl font-semibold mb-2">Importer un fichier CSV</h3>
+      <div class="flex justify-between mt-4 gap-2">
 
-      <input type="file" @change="handleFileUpload" accept=".csv" class="border p-2 rounded w-full mb-4" />
+        <input type="file" @change="handleFileUpload" accept=".csv" class="border p-2 rounded w-full mb-4" />
 
-      <button @click="uploadCsv" class="bg-green-500 text-white px-4 py-2 rounded">
-        Envoyer le fichier
-      </button>
+        <button @click="uploadCsv" class="bg-green-500 text-white px-4 py-2 rounded">
+          Envoyer le fichier
+        </button>
 
+        <button @click="confirmDeleteHistory" class="bg-red-500 text-white px-4 py-2 rounded">
+          Supprimer l'historique du capteur
+        </button>
+      </div>
       <CanvasJSChart v-if="options.data.length" :options="options" class="mt-4 graph-large" />
     </div>
 
@@ -177,8 +182,8 @@ export default {
       try {
         console.log("Récupération de l'historique du capteur...");
         const response = await axios.get(`http://localhost:5000/api/sensors/history/${this.sensorId}`, {
-            headers: { Authorization: `Bearer ${localStorage.getItem("token")}` }
-          });
+          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` }
+        });
         const history = response.data.history;
         console.log("Historique récupéré :", history);
 
@@ -204,8 +209,8 @@ export default {
     async checkJobStatus() {
       try {
         const response = await axios.get(`http://localhost:5000/api/sensors/job/${this.sensorId}/status`, {
-            headers: { Authorization: `Bearer ${localStorage.getItem("token")}` }
-          });
+          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` }
+        });
         this.jobRunning = response.data.running;
         if (this.jobRunning) {
           this.fetchSensorPeriod();
@@ -220,8 +225,8 @@ export default {
       try {
         const action = this.jobRunning ? 'stop' : 'start';
         await axios.post(`http://localhost:5000/api/sensors/job/${this.sensorId}/${action}`, {
-            headers: { Authorization: `Bearer ${localStorage.getItem("token")}` }
-          });
+          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` }
+        });
         this.jobRunning = !this.jobRunning;
 
         if (this.jobRunning) {
@@ -257,8 +262,8 @@ export default {
     async fetchSensorPeriod() {
       try {
         const response = await axios.get(`http://localhost:5000/api/sensors/${this.sensorId}`, {
-            headers: { Authorization: `Bearer ${localStorage.getItem("token")}` }
-          });
+          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` }
+        });
         this.period = response.data.period;
       } catch (error) {
         console.error("Erreur lors de la récupération de la période du capteur :", error);
@@ -269,8 +274,8 @@ export default {
     async deleteSensorHistory() {
       try {
         const response = await axios.delete(`http://localhost:5000/api/sensors/history/${this.sensorId}`, {
-            headers: { Authorization: `Bearer ${localStorage.getItem("token")}` }
-          });
+          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` }
+        });
         alert(response.data.message);
         this.fetchSensorHistory(); // Rafraîchit l'historique après suppression
       } catch (error) {
@@ -309,8 +314,8 @@ export default {
 
         // Récupère l'historique depuis la base de données
         const response = await axios.get(`http://localhost:5000/api/sensors/history/${this.sensorId}`, {
-            headers: { Authorization: `Bearer ${localStorage.getItem("token")}` }
-          });
+          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` }
+        });
         const history = response.data.history;
 
         if (history.length > 0) {

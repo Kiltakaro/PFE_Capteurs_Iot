@@ -17,6 +17,10 @@ from scipy.interpolate import interp1d
 from models import db, User, SensorData, SensorHistory, SensorTemplate
 from users import users_bp
 
+
+time.sleep(5)
+app = Flask(__name__)
+
 ######################### BASE DE DONNES  ########################
 
 # Configuration de la base de données
@@ -74,10 +78,6 @@ jwt = JWTManager(app)
 
 logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
 logging.getLogger('apscheduler').setLevel(logging.DEBUG)
-
-time.sleep(5)
-
-app = Flask(__name__)
 
 # Configuration CORS
 

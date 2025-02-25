@@ -138,8 +138,23 @@ services:
 
 ### Script de tests
 
-A la fin du docker compose il y a beaucoup de commentaires. C'est la base de données de tests à utiliser pour lancer les tests pytest. Il suffit de décommenter le volume db_test_data son conteneur puis de lancer : ```docker-compose run --rm backend sh -c "PYTHONPATH=/backend pytest"```
 
+1. Aller dans le main et décommenter comme ceci
+```python
+# Pour les tests :
+app.config["TESTING"] = True
+app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://user:password@database_test:5432/testDb'
+```
+2. Toujours dans le main, mettre en commentaire comme ceci :
+```python
+# Pour la production :
+# app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://user:password@database:5432/sensorDb'
+# app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+```
+
+3. A la fin du docker compose il y a beaucoup de commentaires. C'est la base de données de tests à utiliser pour lancer les tests pytest. Il suffit de décommenter le volume db_test_data et son conteneur associé. 
+
+4. lancer : ```docker-compose run --rm backend sh -c "PYTHONPATH=/backend pytest"```
 
 
 ## Contributeurs

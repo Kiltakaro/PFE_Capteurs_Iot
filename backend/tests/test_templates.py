@@ -13,13 +13,10 @@ def client():
     """
     Crée un client de test Flask avec une base de données isolée
     """
-    app.config["TESTING"] = True
-    app.config["SQLALCHEMY_DATABASE_URI"] = "postgresql://user:password@database:5432/sensorDb"
-
     with app.app_context():
         db.create_all()
-        yield app.test_client()
-        db.session.rollback()
+        yield app.test_client()  # Donne la main au test
+        db.session.rollback()  # Annule les changements après chaque test
         db.drop_all()
         db.session.remove()
 

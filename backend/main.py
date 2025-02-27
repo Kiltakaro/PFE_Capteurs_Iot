@@ -614,8 +614,14 @@ def on_message(client, userdata, msg):
     payload = msg.payload.decode()
     print(f"Message reçu sur {msg.topic}: {payload}")
 
+    if msg.topic.endswith('/command'):
+        print(f"Message ignoré sur {msg.topic}")
+        return 
+
     try:
         data = json.loads(payload)
+
+        print(f"Data: {data}")
 
         # Cas enregistrement de capteur
         if msg.topic == "system/register":
@@ -671,14 +677,13 @@ def on_message(client, userdata, msg):
                     return
 
         # Cas reception de données
-        else:
+        if msg.topic.endswith('/datastore'):
             sensor_uid = data.get("sensor_uid")
             timestamp = data.get("timestamp")
             value = data.get("value")  # Peut être None si ce n'est pas une valeur de capteur
 
             with app.app_context():
                 sensor = SensorData.query.filter_by(uid=sensor_uid).first()
-                print(f"Capteur {str(sensor.uid)} trouvé")
                 # Cas capteur connu
                 if sensor:
                     print(f"Capteur connu ({sensor_uid})")
@@ -689,8 +694,8 @@ def on_message(client, userdata, msg):
 
                 # Cas capteur inconnu => demande d'enregistrement
                 else:
-                    print(f"Capteur inconnu ({sensor_uid}), demande d'enregistrement")
-                    command_topic = f"{sensor_uid}/command"
+                    print(f"Capteur inconnu ({str(sensor_uid)}), demande d'enregistrement")
+                    command_topic = f"{str(sensor_uid)}/command"
                     mqtt_client.publish(command_topic, json.dumps({"command": "REGISTER"}))
                     print(f"Message REGISTER envoyé sur {command_topic}")
 

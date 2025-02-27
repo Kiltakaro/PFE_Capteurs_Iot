@@ -188,7 +188,6 @@ export default {
         console.log("Historique récupéré :", history);
 
         if (history.length > 0) {
-          this.sensorName = response.data.sensor_uid;
           this.options.data[0].dataPoints = history.map(entry => ({
             x: new Date(entry.timestamp),
             y: entry.value

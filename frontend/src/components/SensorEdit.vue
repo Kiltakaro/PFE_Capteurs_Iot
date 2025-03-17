@@ -112,7 +112,9 @@ export default {
             }
 
             try {
-                const response = await axios.get(`http://${ip}:5000/api/sensors/${this.id}`);
+                const response = await axios.get(`http://${ip}:5000/api/sensors/${this.id}`, {
+                    headers: { Authorization: `Bearer ${localStorage.getItem("token")}` }
+                });
                 this.sensor = response.data;
             } catch (error) {
                 console.error("Erreur lors du chargement du capteur :", error);
@@ -125,7 +127,9 @@ export default {
             this.errorMessage = "";
 
             try {
-                await axios.put(`http://${ip}:5000/api/sensors/${this.id}`, this.sensor);
+                await axios.put(`http://${ip}:5000/api/sensors/${this.id}`, this.sensor, {
+                    headers: { Authorization: `Bearer ${localStorage.getItem("token")}` }
+                });
                 this.alertMessage = "Capteur mis à jour avec succès.";
                 setTimeout(() => {
                     this.$router.push("/sensormanaging");
@@ -140,7 +144,6 @@ export default {
     mounted() {
         const route = useRoute();  // Utilisation de useRoute() pour récupérer les paramètres
         this.id = route.params.id; // Récupération correcte de l'ID
-        console.log("ID récupéré dans mounted():", this.id);
 
         if (!this.id) {
             console.error("Aucun ID de capteur fourni !");

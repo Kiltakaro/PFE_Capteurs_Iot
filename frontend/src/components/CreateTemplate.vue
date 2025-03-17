@@ -89,6 +89,8 @@
     },
   
     methods: {
+
+      // Créer un template
       async createTemplate() {
         this.alertMessage = "";
         this.errorMessage = "";

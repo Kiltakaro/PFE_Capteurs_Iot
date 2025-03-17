@@ -18,39 +18,22 @@ from models import db, User, SensorData, SensorHistory, SensorTemplate
 from users import users_bp
 
 
-logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
-logging.getLogger('apscheduler').setLevel(logging.DEBUG)
-
 time.sleep(5)
-
 app = Flask(__name__)
-
-# Configuration CORS
-
-origins = [
-    "http://localhost",
-    "http://localhost:8080",
-    "http://127.0.0.1:5000",
-    "http://frontend",
-    "http://frontend:8080",
-    "http://frontend:5000",
-    "http://backend",
-    "http://backend:8080",
-    "http://backend:5000",
-    "null"
-]
-
-CORS(app, resources={r"/api/*": {"origins": "*"}}, supports_credentials=True)
-
-# CORS(app, resources={r"/*": {"origins": origins}}, supports_credentials=True)
-
 
 ######################### BASE DE DONNES  ########################
 
 # Configuration de la base de données
+
+# Pour les tests :
+# app.config["TESTING"] = True
+# app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://user:password@database_test:5432/testDb'
+
+# Pour la production :
 app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://user:password@database:5432/sensorDb'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
+#########
 
 # Ajoute un admin si aucun n'existe
 def create_default_admin():
@@ -91,7 +74,33 @@ app.config["JWT_SECRET_KEY"] = "super-secret-key"  # À changer avec une vraie c
 jwt = JWTManager(app)
 
 
-######################################################
+########################## Config Cors ###########################
+
+logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
+logging.getLogger('apscheduler').setLevel(logging.DEBUG)
+
+# Configuration CORS
+
+origins = [
+    "http://localhost",
+    "http://localhost:8080",
+    "http://127.0.0.1:5000",
+    "http://frontend",
+    "http://frontend:8080",
+    "http://frontend:5000",
+    "http://backend",
+    "http://backend:8080",
+    "http://backend:5000",
+    "null"
+]
+
+CORS(app, resources={r"/api/*": {"origins": "*"}}, supports_credentials=True)
+
+# CORS(app, resources={r"/*": {"origins": origins}}, supports_credentials=True)
+
+
+######################### ENDPOINTS #############################
+
 
 
 @app.route('/hello_world')
@@ -103,6 +112,7 @@ def hello_world():
 
 
 @app.route('/api/sensors', methods=['GET'])
+@jwt_required()
 def get_sensors():
     """
     Route pour récupérer les capteurs
@@ -114,6 +124,7 @@ def get_sensors():
 
 # REFAIRE LES SSENSORS APRES
 @app.route('/api/sensors', methods=['POST'])
+@jwt_required()
 def add_sensor():
     """
     Route pour ajouter un capteur
@@ -125,10 +136,14 @@ def add_sensor():
     min_value : Valeur minimale pour la simulation
     max_value : Valeur maximale pour la simulation
     period : Fréquence d'envoi de données lors de la simulation
-    ??min_period 
-    ??max_period
-    ??read_only
-    ??value
+    --- Optionnels --- 
+    Il ne servent a rien dans les calculs mais sont la pour assurer 
+    la compatabilité avec les capteurs réels avec des capteurs réels
+    ------------------
+    min_period = Valeur minimale pour la fréquence d'envoi
+    max_period = Valeur maximale pour la fréquence d'envoi
+    read_only = Capteur en lecture seule
+    value = Valeur initiale du capteur
     """
     data = request.json
     name = data.get('name')
@@ -163,6 +178,7 @@ def add_sensor():
 
 
 @app.route('/api/sensors/<uuid:uid>', methods=['DELETE'])
+@jwt_required()
 def delete_sensor(uid):
     """
     Route pour supprimer un capteur
@@ -187,6 +203,7 @@ def delete_sensor(uid):
 
 
 @app.route('/api/sensors/<uuid:uid>', methods=['GET'])
+@jwt_required()
 def get_sensor(uid):
     """
     Route pour récupérer le capteur spécifique
@@ -202,6 +219,7 @@ def get_sensor(uid):
 
 # on ne modifie peut etre pas la valeur etc, je sais pas comment on simule les capteurs
 @app.route('/api/sensors/<uuid:uid>', methods=['PUT'])
+@jwt_required()
 def update_sensor(uid):
     """
     Route pour modifier un capteur
@@ -227,24 +245,22 @@ def update_sensor(uid):
     sensor.min_period = data.get('min_period', sensor.min_period)
     sensor.max_period = data.get('max_period', sensor.max_period)
     sensor.read_only = data.get('read_only', sensor.read_only)
-    # JEN DOUTE FORT
     sensor.value = data.get('value', sensor.value)
 
     db.session.commit()
 
     # Si le capteur est en pleine simulation, il faut l'update si sa fréquence d'envoi change
     job = scheduler.get_job(uid)
-    if job :
-        if old_period != sensor.period :
-            manage_sensor_job(sensor, "update")
-            print(f"Job mis à jour")
+    if old_period != sensor.period :
+        manage_sensor_job(sensor, "update")
+        print(f"Job mis à jour")
 
 
     print(f"Capteur {sensor.name} mis à jour (période : {sensor.period}s)")
 
 
-
     return jsonify({"message": "Capteur mis à jour", "sensor": sensor.to_dict()}), 200
+
 
 @app.route('/api/templates', methods=['GET'])
 @jwt_required()
@@ -598,8 +614,14 @@ def on_message(client, userdata, msg):
     payload = msg.payload.decode()
     print(f"Message reçu sur {msg.topic}: {payload}")
 
+    if msg.topic.endswith('/command'):
+        print(f"Message ignoré sur {msg.topic}")
+        return 
+
     try:
         data = json.loads(payload)
+
+        print(f"Data: {data}")
 
         # Cas enregistrement de capteur
         if msg.topic == "system/register":
@@ -655,14 +677,13 @@ def on_message(client, userdata, msg):
                     return
 
         # Cas reception de données
-        else:
+        if msg.topic.endswith('/datastore'):
             sensor_uid = data.get("sensor_uid")
             timestamp = data.get("timestamp")
             value = data.get("value")  # Peut être None si ce n'est pas une valeur de capteur
 
             with app.app_context():
                 sensor = SensorData.query.filter_by(uid=sensor_uid).first()
-                print(f"Capteur {str(sensor.uid)} trouvé")
                 # Cas capteur connu
                 if sensor:
                     print(f"Capteur connu ({sensor_uid})")
@@ -673,8 +694,8 @@ def on_message(client, userdata, msg):
 
                 # Cas capteur inconnu => demande d'enregistrement
                 else:
-                    print(f"Capteur inconnu ({sensor_uid}), demande d'enregistrement")
-                    command_topic = f"{sensor_uid}/command"
+                    print(f"Capteur inconnu ({str(sensor_uid)}), demande d'enregistrement")
+                    command_topic = f"{str(sensor_uid)}/command"
                     mqtt_client.publish(command_topic, json.dumps({"command": "REGISTER"}))
                     print(f"Message REGISTER envoyé sur {command_topic}")
 

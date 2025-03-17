@@ -15,6 +15,7 @@ backend/__pycache__/
 backend/instance/
 backend/instance/app.db
 backend/test_main.py
+backend/.pytest_cache/
 
 
 # local env files
